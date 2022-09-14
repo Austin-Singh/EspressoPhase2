@@ -1,0 +1,1300 @@
+package Parser;
+
+import Scanner.Scanner;
+import AST.*;
+import Utilities.Error;
+import Parser.*;
+
+
+/* Java 1.2 parser for CUP.  
+ * Copyright (C) 1998 C. Scott Ananian <cananian@alumni.princeton.edu>
+ * This program is released under the terms of the GPL; see the file
+ * COPYING for more details.  There is NO WARRANTY on this code.
+ */
+
+parser code  {: 
+
+  public Scanner lexer;
+
+  public parser(Scanner l) {
+    this();
+    lexer=l;
+  }
+
+  public void syntax_error(java_cup.runtime.Symbol current) {
+    if(current.value == null) {
+      System.out.println("Unexpected end of file." + Scanner.curLine);
+      System.exit(1);
+    }	
+    else {
+      Token t = (Token)current.value;
+	System.out.println(Error.fileName + ":" + Scanner.lineCount + ": Syntax error:\n\n" + Scanner.curLine);
+	for (int i=1; i<Scanner.curLine.length()+1-t.text.length(); i++) 
+	  System.out.print(" ");
+        System.out.println("^");
+
+      System.exit(1);
+    }
+  }
+
+  public static java.util.HashSet<String> imports = new java.util.HashSet<String>();
+
+  public static Sequence /*(ClassDecl)*/ getImportFile(String name) {
+    if (!imports.contains(name)) {
+      imports.add(name);      				 
+      try {	
+        Scanner s1 = new Scanner( new java.io.FileReader(Utilities.Settings.includeDir+"/"+name+".java") );     
+        System.out.println("Creating parser for "+Utilities.Settings.includeDir+"/"+name+".java");
+        parser p1 = new parser(s1);
+        java_cup.runtime.Symbol r = p1.parse();
+	
+	// for each class decl in r.value set each class as imported and thus no need to 
+ 	// generate code.
+	Sequence imports = ((Compilation)r.value).types();
+	for (int i=0; i<imports.nchildren; i++) {
+	  ClassDecl cd = (ClassDecl)imports.children[i];
+	  cd.doNotGenerateCode();
+        }	
+        return imports;  //((Compilation)r.value).types();
+      } catch (java.io.FileNotFoundException e) {
+        System.out.println("File not found : "+Utilities.Settings.includeDir+"/"+name+".java");
+        System.exit(1);			      			       
+      } catch (Exception e) {
+        System.out.println("Something went wrong while trying to parse "+Utilities.Settings.includeDir+"/"+name+".java"); 
+        System.exit(1);
+      }
+    }		    	   
+    return null;
+  }
+
+:};
+
+scan with {: return lexer.next_token(); :};
+
+// -----------------------------------------------------------------------------
+// Terminals
+// -----------------------------------------------------------------------------
+
+// Note: The order here must be that of the names[] array in Token.java
+
+// Types
+terminal Token BYTE, CHAR, SHORT, INT, LONG; // integrals
+terminal Token FLOAT, DOUBLE;                // floating points
+terminal Token BOOLEAN, STRING;              // boolean and string
+
+// Keywords
+terminal Token BREAK; 		// break
+terminal Token CLASS; 		// class
+terminal Token CONTINUE; 	// continue
+terminal Token DO;              // do_statement
+terminal Token ELSE;            // else
+terminal Token EXTENDS;		// extends
+terminal Token FOR; 		// for
+terminal Token IF;	 	// if
+terminal Token NEW; 		// new
+terminal Token RETURN; 		// return
+terminal Token SUPER;		// super
+terminal Token THIS;		// this
+terminal Token VOID; 		// void
+terminal Token WHILE;		// while 
+terminal Token CASE;            // case
+terminal Token SWITCH;          // switch
+terminal Token DEFAULT;         // default
+terminal Token IMPLEMENTS;      // implements
+terminal Token INTERFACE;       // interface
+terminal Token IMPORT;		// import
+
+// Modifiers
+terminal Token PUBLIC;          // public
+terminal Token PRIVATE;         // private
+terminal Token STATIC;          // static 
+terminal Token FINAL;           // final 
+terminal Token ABSTRACT;        // abstract
+
+// Literals and Identifiers
+terminal Token BOOLEAN_LITERAL;
+terminal Token FLOAT_LITERAL;
+terminal Token DOUBLE_LITERAL;
+terminal Token IDENTIFIER; 
+terminal Token INTEGER_LITERAL; 
+terminal Token LONG_LITERAL; 
+terminal Token NULL_LITERAL;
+terminal Token STRING_LITERAL;
+terminal Token CHARACTER_LITERAL;
+
+// Operators
+terminal Token EQ, LT, GT;      // = < >
+terminal Token LTEQ, GTEQ;     	// <= >=
+terminal Token PLUSPLUS; 	// ++
+terminal Token MINUSMINUS; 	// --
+terminal Token PLUS, MINUS;	// + -
+terminal Token MULT, DIV;       // * /
+terminal Token COMP, NOT, MOD;  // ~ ! %
+terminal Token EQEQ, NOTEQ; 	// == !=
+terminal Token AND, XOR, OR;	// & | ^
+terminal Token ANDAND, OROR;	// && ||
+terminal Token LSHIFT, RSHIFT;	// << >>
+terminal Token RRSHIFT;  	// >>>
+terminal Token INSTANCEOF;	// instanceof
+terminal Token MULTEQ, DIVEQ;   // *= /=
+terminal Token PLUSEQ, MINUSEQ; // += -=
+terminal Token MODEQ, XOREQ;    // %= ^=
+terminal Token LSHIFTEQ, RSHIFTEQ; // <<= >>=
+terminal Token RRSHIFTEQ;	// >>>=
+terminal Token ANDEQ, OREQ;     // &= |=
+
+// Misc
+terminal Token SEMICOLON, COLON;// ; :
+terminal Token COMMA, DOT; 	// , .
+terminal Token QUEST;           // ?
+
+// Brackets
+terminal Token LBRACE, RBRACE; 	// { }
+terminal Token LPAREN, RPAREN; 	// ( )
+terminal Token LBRACK, RBRACK;  // [ ] 
+
+// -----------------------------------------------------------------------------
+// Non terminals
+// -----------------------------------------------------------------------------
+
+//  Do some work here: You must type the non terminals with the
+// correct types. The type is the class name of the parse tree node that
+// the production returns.
+//
+// example:
+// We had from phase 1:
+//
+// non terminal AST modifiers_opt, modifiers; 
+//
+// replace this by 
+//
+// non terminal Sequence modifiers_opt, modifiers; 
+//
+// because now these productions return an object of class 'Sequence'
+// Do this for the rest of the nonterminals. Use the abstract grammar
+// in the assignment booklet to help you
+
+// 19.2) The Syntactic Grammar
+non terminal Compilation goal;
+
+// 19.3) Lexical Structure
+non terminal AST literal;
+
+// 19.4) Types, Values, and Variables
+non terminal AST type;
+non terminal AST primitive_type;
+non terminal AST reference_type;
+non terminal AST class_or_interface_type;
+non terminal AST class_type;
+non terminal AST interface_type;
+non terminal AST array_type;
+
+// 19.5) Names
+non terminal AST name; 
+
+// 19.6) Packages
+non terminal AST compilation_unit;
+non terminal AST import_declarations_opt, import_declarations;
+non terminal AST import_declaration;
+non terminal AST type_declarations_opt, type_declarations;
+non terminal AST type_declaration;
+ 
+// 19.7) Productions used only in the LALR(1) grammar
+non terminal AST modifiers_opt, modifiers; 
+non terminal AST modifier;
+
+// 19.8) Classes
+// 19.8.1) Class Declaration
+non terminal AST class_declaration;
+non terminal AST super_opt, super; 
+non terminal AST interfaces_opt, interfaces, interface_type_list;
+non terminal AST class_body;
+non terminal AST class_body_declarations, class_body_declarations_opt;
+non terminal AST class_body_declaration;
+
+// 19.8.2) Field Declarations
+non terminal AST field_declaration;
+non terminal AST variable_declarators;
+non terminal AST variable_declarator;
+non terminal AST variable_declarator_id;
+non terminal AST variable_initializers_opt;
+non terminal AST variable_initializer;
+
+// 19.8.3) Method Declarations
+non terminal AST method_declaration;
+non terminal AST method_body;
+non terminal AST formal_parameter_list_opt, formal_parameter_list;
+non terminal AST formal_parameter;
+
+// 19.8.4) Static Initializers
+non terminal AST static_initializer;   
+
+// 19.8.5) Constructor Declarations
+non terminal AST constructor_declaration;
+non terminal AST constructor_body;
+non terminal AST explicit_constructor_invocation;
+
+// 19.9) Interfaces
+// 19.9.1) Interface Declarations
+non terminal AST interface_declaration;
+non terminal AST extends_interfaces, extends_interfaces_opt, interface_body;
+non terminal AST interface_member_declarations_opt;
+non terminal AST interface_member_declarations, interface_member_declaration;
+non terminal AST constant_declaration;
+non terminal AST abstract_method_declaration;
+
+// 19.10) Arrays
+non terminal AST array_initializer;
+non terminal AST variable_initializers;
+
+// 19.11) Blocks and Statements
+non terminal AST block;
+non terminal AST block_statements_opt, block_statements;
+non terminal AST block_statement;
+non terminal AST local_variable_declaration;
+non terminal AST statement, statement_no_short_if;
+non terminal AST statement_without_trailing_substatement;
+non terminal AST empty_statement;
+non terminal AST expression_statement;
+non terminal AST statement_expression;
+non terminal AST if_then_statement;
+non terminal AST if_then_else_statement, if_then_else_statement_no_short_if;
+non terminal AST do_statement;
+non terminal AST switch_statement;
+non terminal AST  switch_block;
+non terminal AST switch_block_statement_groups_opt;
+non terminal AST switch_block_statement_groups;
+non terminal AST switch_block_statement_group;
+non terminal AST switch_label;
+non terminal AST switch_labels;
+non terminal AST while_statement, while_statement_no_short_if;
+non terminal AST for_statement, for_statement_no_short_if;
+non terminal AST for_init_opt, for_init;
+non terminal AST for_update_opt, for_update;
+non terminal AST statement_expression_list;
+non terminal AST break_statement; 
+non terminal AST continue_statement;
+non terminal AST return_statement;
+
+// 19.12) Expressions
+non terminal AST primary, primary_no_new_array;
+non terminal AST class_instance_creation_expression;
+non terminal AST argument_list_opt, argument_list;
+non terminal AST array_creation_expression;
+non terminal AST dim_expr;
+non terminal AST dim_exprs, dims_opt, dims;
+non terminal AST field_access;
+non terminal AST method_invocation;
+non terminal AST array_access;
+non terminal AST postfix_expression;
+non terminal AST post_increment_expression, post_decrement_expression;
+non terminal AST unary_expression;
+non terminal AST pre_increment_expression, pre_decrement_expression;
+non terminal AST unary_expression_not_plus_minus;
+non terminal AST cast_expression;
+non terminal AST multiplicative_expression, additive_expression;
+non terminal AST shift_expression, relational_expression, equality_expression;
+non terminal AST and_expression, exclusive_or_expression, inclusive_or_expression;
+non terminal AST conditional_and_expression, conditional_or_expression;
+non terminal AST conditional_expression, assignment_expression;
+non terminal AST assignment;
+non terminal AST assignment_operator;
+non terminal AST left_hand_side;
+non terminal AST expression_opt, expression;
+non terminal AST constant_expression;
+
+
+start with goal;
+
+// Do work here: 
+// For all the productions you need to add a 'name'
+// to each terminal or nonterminal like below. You can see that 
+// compilation_unit is named c (by the :c part) - what ever parse tree is
+// generated from the nonterminal compilation_unit is returned in the
+// variable/name c. The CUP variable RESULT should be assigned to which
+// ever new parse tree node you generate. if you don't generate a new
+// node you just 'send the one you got on' by saying RESULT = c;. Don't
+// forget that all semantic action is enclosed in {: :} brackets.
+
+// IMPORTANT: I already added all the names for you - you just use them ;-) 
+// Aren't I the nicest you ever knew !!!
+
+// I have done a few and included some that look kinda strange, these
+// that deal with 'flattening a sequence' you just leave as they are.
+
+// -----------------------------------------------------------------------------
+// 19.2) The Syntactic Grammar
+// -----------------------------------------------------------------------------
+
+// Type: Compilation :> AST
+// ^^^^^^^^^^^^^^^^^^^^^^^^ this just tell me that Compilation is a subclass of AST
+goal ::=	compilation_unit:c {: RESULT = c; :}
+	;
+
+// -----------------------------------------------------------------------------
+// 19.3) Lexical Structure.
+// -----------------------------------------------------------------------------
+
+// Type: Literal :> Expression :> AST
+literal ::=	
+		INTEGER_LITERAL:l        {: RESULT = new Literal(l, Literal.IntKind);     :}
+	|       LONG_LITERAL:l           {: RESULT = new Literal(l, Literal.LongKind);    :}
+	|       FLOAT_LITERAL:l          {: RESULT = new Literal(l, Literal.FloatKind);   :}
+	|       DOUBLE_LITERAL:l         {: RESULT = new Literal(l, Literal.DoubleKind);  :}
+	|	BOOLEAN_LITERAL:l        {: RESULT = new Literal(l, Literal.BooleanKind); :}
+	|	STRING_LITERAL:l	 {: RESULT = new Literal(l, Literal.StringKind);  :}
+	|	NULL_LITERAL:l           {: RESULT = new Literal(l, Literal.NullKind);    :}
+	|       CHARACTER_LITERAL:l      {: RESULT = new Literal(l, Literal.CharKind);    :}
+	;
+
+// -----------------------------------------------------------------------------
+// 19.4) Types, Values, and Variables
+// -----------------------------------------------------------------------------
+
+// Type: Type :> AST
+type	::=	primitive_type:l 	 {: RESULT = l; :}
+	|	reference_type:l         {: RESULT = l; :}
+	;
+
+// Type: PrimitiveType :> Type :> AST
+primitive_type ::=
+		BOOLEAN:l {: RESULT = new PrimitiveType(l, PrimitiveType.BooleanKind); :}
+	|       BYTE:l	  {: RESULT = new PrimitiveType(l, PrimitiveType.ByteKind);  :}
+	|       SHORT:l   {: RESULT = new PrimitiveType(l, PrimitiveType.ShortKind);  :}
+	|	INT:l     {: RESULT = new PrimitiveType(l, PrimitiveType.IntKind);     :}
+	|       LONG:l    {: RESULT = new PrimitiveType(l, PrimitiveType.LongKind);     :}
+	|       FLOAT:l   {: RESULT = new PrimitiveType(l, PrimitiveType.FloatKind);   :}
+	|	DOUBLE:l  {: RESULT = new PrimitiveType(l, PrimitiveType.DoubleKind);  :}
+	|       CHAR:l    {: RESULT = new PrimitiveType(l, PrimitiveType.CharKind);  :}
+	|       STRING:l  {: RESULT = new PrimitiveType(l, PrimitiveType.StringKind);  :}
+	;
+
+// Type: Type :> AST
+reference_type ::=
+		class_or_interface_type:c	{: RESULT = c; :}
+	|	array_type:c			{: RESULT = c; :}
+	;
+
+// Type: ClassType :> Type :> AST
+class_or_interface_type ::=
+		name:n	               		{: RESULT = new ClassType(n); :}
+	;	
+
+// Type: ClassType :> AST
+class_type ::= 
+		class_or_interface_type:c     	{: RESULT = c; :}
+	;
+
+// Type: ClassType :> AST
+interface_type ::=
+		class_or_interface_type:c     	{: RESULT = c; :}
+	;
+
+// Type: ArrayType :> Type :> AST
+array_type ::= 
+	        primitive_type:t dims:d	        {: RESULT = new ArrayType(t, d.nchildren); :}
+	|	name:n dims:d	 		{: RESULT = new ArrayType(new ClassType(n), d.nchildren); :}
+	;
+
+// -----------------------------------------------------------------------------
+// 19.5) Names
+// -----------------------------------------------------------------------------
+
+// Type: 
+name	::=	IDENTIFIER:i
+	;
+
+// -----------------------------------------------------------------------------
+// 19.6) Packages
+// -----------------------------------------------------------------------------
+
+// Type: Compilation :> AST
+compilation_unit ::=
+		import_declarations_opt:i // this should not have any actions on it
+		type_declarations_opt:t   {: RESULT = new Compilation(t.merge(i)); :}
+	;
+
+// Type:  Sequence(ClassDecl :> AST) :> AST
+import_declarations_opt ::= 
+		import_declarations:is        {: RESULT = is; :} 
+   	|       /* Empty */ 		      {: RESULT = new Sequence(); :}
+	;
+
+// Type: Sequence(ClassDecl :> AST) :> AST
+import_declarations ::= 
+		import_declaration:i		{: RESULT = parser.getImportFile(i.getname()); :}
+	|	import_declarations:is import_declaration:i {: RESULT = is.merge(parser.getImportFile(i.getname())); :}
+	;
+
+// Type: Name :> AST
+import_declaration ::=
+		IMPORT name:n SEMICOLON   {:  RESULT = n; :}
+        ;
+
+// Type: 
+type_declarations_opt ::= 
+		type_declarations:e 	
+	|	/* Empty */          	
+	;
+
+// Type: 
+type_declarations ::=
+		type_declaration:t  	
+	|	type_declarations:ts type_declaration:t 
+	;
+
+// Type: 
+type_declaration ::=
+		class_declaration:c    	
+	|	interface_declaration:c 
+	;
+
+
+// -----------------------------------------------------------------------------
+// 19.7) Productions used only in the LALR(1) grammar
+// -----------------------------------------------------------------------------
+
+// Type: Sequence(Modifier) :> AST
+modifiers_opt ::=
+		modifiers:m             {: RESULT = m; :}
+	|       /* Empty */             {: RESULT = new Sequence(new Modifier(Modifier.Public)); :}
+	;
+
+// Type: Sequence(Modifier) :> AST
+modifiers ::=
+		modifier:m              {: RESULT = new Sequence(m); :}
+	|	modifiers:ms modifier:m {: RESULT = ms.append(m); :}
+	;
+
+// Type: Modifier :> AST
+modifier ::=
+		PUBLIC:m   
+	|	PRIVATE:m  
+	|	STATIC:m   
+	|	FINAL:m    
+	|	ABSTRACT:m {: RESULT = new Modifier(m, Modifier.Abstract); :} 
+	;
+
+// -----------------------------------------------------------------------------
+// 19.8) Classes
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// 19.8.1) Class Declaration:
+// -----------------------------------------------------------------------------
+
+// Type: ClassDecl :> AST
+class_declaration ::=
+		modifiers_opt:m CLASS name:n super_opt:s
+			interfaces_opt:io class_body:b 
+			{: RESULT = new ClassDecl(m, n, s, io, b, ClassDecl.IS_NOT_INTERFACE); :}
+	;
+
+// Type: ClassType :> Type :> AST
+super_opt ::=
+		super:s			{: RESULT = s; :}
+	|       /* Empty */		
+	;
+
+// Type: ClassType :> Type :> AST
+super ::= EXTENDS class_type:c		{: RESULT = c; :}
+	;
+
+// Type: Sequence(ClassType) :> AST
+interfaces_opt ::=
+		interfaces:i		{: RESULT = i; :}		
+	|	/* Empty */		{: RESULT = new Sequence(); :}
+	;
+
+
+// Type: Sequence(ClassType) :> AST
+interfaces ::=
+		IMPLEMENTS interface_type_list:l {: RESULT = l; :}
+	;
+
+// Type: Sequence(ClassType) :> AST
+interface_type_list ::=
+		interface_type:i	{: RESULT = new Sequence(i); :}
+	|	interface_type_list:l COMMA interface_type:i
+					{: RESULT = l.append(i); :}
+	;
+
+// Type: Sequence(ClassBodyDecl) :> AST
+class_body ::=	
+		LBRACE class_body_declarations_opt:l RBRACE 
+					   {: RESULT = l; :}
+	;
+
+// Type: Sequence(ClassBodyDecl) :> AST
+class_body_declarations_opt ::=
+		class_body_declarations:l  {: RESULT = l; :} 
+	|	/* Empty */                {: RESULT = new Sequence(); :}
+	;
+
+// Type: Sequence(ClassBodyDecl) :> AST
+class_body_declarations ::=
+		class_body_declaration:e   {: RESULT = e; :}
+	|	class_body_declarations:es class_body_declaration:e 
+                                           {: RESULT = es.merge((Sequence) e); :}
+	;
+
+// Type: Sequence(ClassBodyDecl) :> AST
+class_body_declaration ::=
+		field_declaration:l        {: RESULT = l; :}
+	|	method_declaration:l       {: RESULT = new Sequence(l); :}		
+	|       static_initializer:l       {: RESULT = new Sequence(l); :}
+	|	constructor_declaration:l  {: RESULT = new Sequence(l); :}
+	;
+
+// -----------------------------------------------------------------------------
+// 19.8.2) Field Declarations
+// -----------------------------------------------------------------------------
+
+// Type: Sequence(FieldDecl :> ClassBodyDecl) :> AST
+field_declaration ::=
+		modifiers_opt:m type:t variable_declarators:v SEMICOLON 
+			{:  
+			  // turn 'type a,b,c' into 
+			  // type a; 
+	                  // type b; 
+	                  // type c;
+                          // also turn type[]..[] a[]...[] into
+	                  // type[]...[][]...[] a
+			  for (int i=0;i<v.nchildren; i++) {
+			    Var var = (Var)v.children[i];
+			    Type at;
+			    if (var.name().getArrayDepth() != 0) {
+			      if (t.isArrayType()) {
+				ArrayType att = (ArrayType)t;
+			        at = new ArrayType(att.baseType(), 
+				                   att.getDepth()+var.name().getArrayDepth());
+		              } else {
+			        at = new ArrayType(t, var.name().getArrayDepth());
+		              }
+			      var.name().setArrayDepth(0);
+			    } else
+			      at = t;
+		 	    v.children[i] = new FieldDecl(m, at, (Var)v.children[i], false);
+			  }
+  			  RESULT = v; 
+			:}
+	;
+
+// Type:
+variable_declarators ::=
+		variable_declarator:v 	
+	|	variable_declarators:vs COMMA variable_declarator:v
+					
+	;
+
+// Type: 
+variable_declarator ::=
+		variable_declarator_id:n					
+	|	variable_declarator_id:n EQ variable_initializer:i
+	;
+
+
+// Type: 
+variable_declarator_id ::=
+		name:n			
+	|	variable_declarator_id:v LBRACK RBRACK
+	;
+
+// Type: 
+variable_initializer ::=
+		expression:l 		
+	|	array_initializer:a	
+	;
+
+// -----------------------------------------------------------------------------
+// 19.8.3) Method Declarations
+// -----------------------------------------------------------------------------
+
+// Type: 
+method_declaration ::=
+		modifiers_opt:m  type:r  name:n 
+		LPAREN  formal_parameter_list_opt:p  RPAREN
+		method_body:b    
+	|	modifiers_opt:m  VOID:v	 name:n 
+		LPAREN  formal_parameter_list_opt:p  RPAREN
+		method_body:b    
+	;
+
+// Type: 
+method_body ::=
+		block:b		
+	|	SEMICOLON	
+	;
+
+
+// Type: 
+formal_parameter_list_opt ::=
+		formal_parameter_list:l 
+	|	/* Empty */		
+	;
+
+// Type:
+formal_parameter_list ::=
+		formal_parameter:l	
+	|	formal_parameter_list:ls COMMA formal_parameter:l
+	;
+
+// Type: ParamDecl :> AST
+formal_parameter ::=
+		type:t variable_declarator_id:n		
+		       			{:
+					  // fix the array type - see field_decls for more info
+					  Type at;
+                            		  if (n.getArrayDepth() != 0) {
+                              		    if (t.isArrayType()) {
+                                	    ArrayType att = (ArrayType)t;
+					    at = new ArrayType(att.baseType(),
+                                                               att.getDepth()+n.getArrayDepth());
+	                                    } else {
+			      	                at = new ArrayType(t, n.getArrayDepth());
+                                            }			
+                                            n.setArrayDepth(0);
+                                          } else
+                                            at = t;
+					  RESULT = new ParamDecl(at, n); 
+					:}
+	;
+
+// -----------------------------------------------------------------------------
+// 19.8.4) Static Initializers
+// -----------------------------------------------------------------------------
+
+// Type: 
+static_initializer ::= 
+		STATIC block:b		
+	;
+
+// -----------------------------------------------------------------------------
+// 19.8.5) Constructor Declarations
+// -----------------------------------------------------------------------------
+
+// Type: 
+constructor_declaration ::=
+		modifiers_opt:m name:n LPAREN formal_parameter_list_opt:p RPAREN 
+		constructor_body:b 
+	;
+
+// Type: 
+constructor_body ::=
+		LBRACE explicit_constructor_invocation:e block_statements:b RBRACE
+	|	LBRACE explicit_constructor_invocation:e RBRACE
+	|	LBRACE block_statements:b RBRACE
+	|       LBRACE RBRACE
+	;
+
+// Type: 
+explicit_constructor_invocation ::=
+		SUPER:s LPAREN argument_list_opt:a RPAREN SEMICOLON
+	|	THIS:t LPAREN argument_list_opt:a RPAREN SEMICOLON
+	;
+
+// -----------------------------------------------------------------------------
+// 19.9) Interfaces
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// 19.9.1) Interface Declarations
+// -----------------------------------------------------------------------------
+
+// Type: 
+interface_declaration ::=
+		modifiers_opt:m INTERFACE name:n 
+		extends_interfaces_opt:e interface_body:i
+	;
+
+// Type:
+extends_interfaces_opt ::=
+		extends_interfaces:ei		
+	|	/* Empty */			
+	;
+
+// Type: 
+extends_interfaces ::=
+		EXTENDS interface_type:it	
+	|	extends_interfaces:ei COMMA interface_type:it
+	;
+
+// Type: 
+interface_body ::=
+		LBRACE interface_member_declarations_opt:io RBRACE
+	;
+	
+// Type: 
+interface_member_declarations_opt ::=
+		interface_member_declarations:id 
+	|	/* Empty */	                 
+	;
+
+// Type: 
+interface_member_declarations ::=
+		interface_member_declaration:i         
+	|	interface_member_declarations:is
+			interface_member_declaration:i 
+	;
+
+// Type: 
+interface_member_declaration ::=
+		constant_declaration:cd         
+	|	abstract_method_declaration:md  
+	;
+	
+// Type: Sequence(FieldDecl) :> AST
+constant_declaration ::=
+		field_declaration:f
+			{: for (int i=0; i<f.nchildren; i++) {
+		 	     ((FieldDecl)f.children[i]).interfaceMember = true;
+			     // if not declared final and static, make it so
+			     if (!((FieldDecl)f.children[i]).modifiers.isFinal())
+                                ((FieldDecl)f.children[i]).modifiers.set(false,false,
+					new Modifier(Modifier.Final));	
+			     if (!((FieldDecl)f.children[i]).modifiers.isStatic())
+                                ((FieldDecl)f.children[i]).modifiers.set(false,false,
+					new Modifier(Modifier.Static));	
+
+				}	
+          		   RESULT = f;                
+			:}
+                        
+	;
+
+// Type: 
+abstract_method_declaration ::=
+		modifiers_opt:m  type:r  name:n 
+		LPAREN  formal_parameter_list_opt:p  RPAREN SEMICOLON
+	|	modifiers_opt:m  VOID:v	 name:n 
+		LPAREN  formal_parameter_list_opt:p  RPAREN SEMICOLON
+	;
+
+// -----------------------------------------------------------------------------
+// 19.10) Arrays
+// -----------------------------------------------------------------------------
+
+// Type:
+array_initializer ::=
+		LBRACE variable_initializers_opt:v RBRACE 
+	;
+
+// Type:
+variable_initializers_opt ::=
+	        variable_initializers:v		
+	|	/* Epsilon */			
+	;
+
+	
+// Type: 
+variable_initializers ::=
+		variable_initializer:v		
+	|	variable_initializers:vs COMMA variable_initializer:v
+	;
+
+// -----------------------------------------------------------------------------
+// 19.11) Blocks and Statements
+// -----------------------------------------------------------------------------
+
+// Type: 
+block ::=	
+		LBRACE block_statements_opt:l RBRACE 
+	;
+
+// Type: 
+block_statements_opt ::=
+		block_statements:l 	
+	|       /* Empty */		
+	;
+
+// Type:
+block_statements ::=
+		block_statement:l  	
+	|	block_statements:ls block_statement:l
+	;
+
+// Type: 
+block_statement ::=
+		local_variable_declaration:l SEMICOLON 
+	|	statement:l                            
+	;
+
+// Type: Sequence(LocalDecl) :> AST
+local_variable_declaration ::=
+		type:t variable_declarators:v
+			{: 
+			  // turn 'type a,b,c' into type a; type b; type c;
+			  // do the array fiddeling as for fields.
+                          for (int i=0;i<v.nchildren; i++) {
+			    Var var = (Var)v.children[i];
+			    Type at;
+			    if (var.name().getArrayDepth() != 0) {
+			      if (t.isArrayType()) {
+				ArrayType att = (ArrayType)t;
+			        at = new ArrayType(att.baseType(), 
+				                   att.getDepth()+var.name().getArrayDepth());
+		              } else {
+			        at = new ArrayType(t, var.name().getArrayDepth());
+		              }
+			      var.name().setArrayDepth(0);
+			    } else
+			      at = t;
+		 	    v.children[i] = new LocalDecl(at, (Var)v.children[i]);
+			  }
+  			  RESULT = v; 
+                       :}
+	;
+
+// Type:
+statement ::=	
+		statement_without_trailing_substatement:l 
+	|	if_then_statement:l 			  
+	|	if_then_else_statement:l 		  
+	|	while_statement:l 			  
+	|	for_statement:l 			  
+	;
+
+// Type:
+statement_no_short_if ::=
+		statement_without_trailing_substatement:l 
+	|	if_then_else_statement_no_short_if:l 	  
+	|	while_statement_no_short_if:l 		  
+	|	for_statement_no_short_if:l 		  
+	;
+
+// Type:
+statement_without_trailing_substatement ::=
+		block:l 		
+	|	empty_statement:l 	
+	|	expression_statement:l 	
+	|	switch_statement:l      
+	|	do_statement:l          
+	|	break_statement:l 	
+	|	continue_statement:l 	
+	|	return_statement:l 	
+	;
+
+// Type: 
+empty_statement ::=
+		SEMICOLON              
+	;
+
+// Type:
+expression_statement ::=
+		statement_expression:l SEMICOLON 
+	;
+
+// Type:
+statement_expression ::=
+		assignment:l                         
+	|	pre_increment_expression:l           
+	| 	pre_decrement_expression:l           
+	|	post_increment_expression:l 	     
+	|	post_decrement_expression:l 	     
+	|	method_invocation:l 		     
+	|	class_instance_creation_expression:l 
+	;
+
+// Type:
+if_then_statement ::=
+		IF LPAREN expression:e RPAREN statement:t
+	;
+
+// Type: 
+if_then_else_statement ::=
+		IF LPAREN expression:e RPAREN statement_no_short_if:t
+		ELSE statement:ls
+	;
+
+// Type:
+if_then_else_statement_no_short_if ::=
+		IF LPAREN expression:e RPAREN statement_no_short_if:t
+		ELSE statement_no_short_if:ls
+	;
+
+// Type:
+do_statement ::=
+		DO statement:s WHILE LPAREN expression:e RPAREN SEMICOLON
+	;
+
+// Type SwitchStat :> Statement :> AST
+switch_statement ::=
+		SWITCH LPAREN expression:e RPAREN switch_block:s
+			{: RESULT = new SwitchStat(e, s); :}
+	;
+
+// Type:
+switch_block ::=
+		LBRACE switch_block_statement_groups_opt:s RBRACE
+	;
+
+// Type: 
+switch_block_statement_groups_opt ::=
+		switch_block_statement_groups:ss  
+	|	/* Empty */			  
+	;
+	
+// Type: 
+switch_block_statement_groups ::=
+		switch_block_statement_group:s	
+	|	switch_block_statement_groups:ss switch_block_statement_group:s
+	;
+
+// Type:
+switch_block_statement_group ::=
+		switch_labels:l block_statements:s   
+	;
+
+// Type: 
+switch_labels ::=
+		switch_label:s			 
+	|	switch_labels:ss  switch_label:s 
+	;
+
+// Type: 
+switch_label ::=
+		CASE constant_expression:e COLON   
+	|	DEFAULT COLON                      
+	;
+
+// Type:
+while_statement ::=
+		WHILE LPAREN expression:e RPAREN statement:s
+	;
+
+// Type: 
+while_statement_no_short_if ::=
+		WHILE LPAREN expression:e RPAREN statement_no_short_if:s
+	;
+
+// Type:
+for_statement ::=
+		FOR:f LPAREN for_init_opt:i SEMICOLON expression_opt:e SEMICOLON
+		for_update_opt:u RPAREN statement:s
+	;
+
+// Type: 
+for_statement_no_short_if ::=
+		FOR:f LPAREN for_init_opt:i SEMICOLON expression_opt:e SEMICOLON
+		for_update_opt:u RPAREN statement_no_short_if:s
+	;
+
+// Type: 
+for_init_opt ::=
+		for_init:l 		
+	|       /* Empty */    		
+	;
+
+// Type: 
+for_init ::=	
+		statement_expression_list:l  
+	|	local_variable_declaration:l 
+	;
+
+// Type: 
+for_update_opt ::=
+		for_update:l 		
+	|       /* Empty */		
+	;
+
+// Type: 
+for_update ::=	
+		statement_expression_list:l 
+	;
+
+// Type: 
+statement_expression_list ::=
+		statement_expression:e 	
+	|	statement_expression_list:es COMMA statement_expression:e
+	;
+
+// Type: 
+break_statement ::=
+		BREAK:b SEMICOLON
+	;
+
+// Type: 
+continue_statement ::=
+		CONTINUE:c SEMICOLON
+	;
+
+// Type:
+return_statement ::=
+		RETURN:r expression_opt:e SEMICOLON
+	;
+
+// -----------------------------------------------------------------------------
+// 19.12) Expressions
+// -----------------------------------------------------------------------------
+
+// Type:
+primary ::=
+		primary_no_new_array:p		     
+	|	array_creation_expression:a	     
+	;
+
+// Type:
+primary_no_new_array ::=	
+		literal:l  			     
+	|	THIS:l 				     
+	|	LPAREN expression:l RPAREN 	     
+	|	class_instance_creation_expression:l 
+	|	field_access:l 			     
+	|	method_invocation:l   		     
+	|	array_access:l			     
+	;
+
+
+// Type:
+class_instance_creation_expression ::=
+		NEW class_type:t LPAREN argument_list_opt:a RPAREN
+					
+	;
+
+// Type:
+argument_list_opt ::=
+		argument_list:l 	
+	|       /* Empty */             
+	;
+
+// Type:
+argument_list ::=
+		expression:l 		
+	|	argument_list:ls COMMA expression:l
+	;
+
+// Type:
+array_creation_expression ::=
+		NEW primitive_type:t dim_exprs:d1 dims_opt:d2
+	|	NEW class_or_interface_type:t dim_exprs:d1 dims_opt:d2
+	|	NEW primitive_type:t dims:d array_initializer:i
+	|	NEW class_or_interface_type:t dims:d array_initializer:i
+	;
+
+// Type:
+dim_exprs ::=	dim_expr:d     	       	 
+	|	dim_exprs:ds dim_expr:d	 
+	;
+
+// Type:
+dim_expr ::=	LBRACK expression:e RBRACK 
+	;
+
+// Type:
+dims_opt ::=
+		dims:d			
+	|	/* Epsilon */		
+	;
+
+// Type: 
+dims ::=	LBRACK RBRACK	        
+     	|	dims:d LBRACK RBRACK	
+	;
+
+// Type: 
+field_access ::=
+		primary:e DOT name:n 	
+	|	SUPER:s DOT name:n      
+	|       name:e DOT name:n       
+	;
+
+// Type: 
+method_invocation ::=
+		name:n LPAREN argument_list_opt:a RPAREN
+        |	primary:t DOT name:f LPAREN argument_list_opt:a RPAREN
+	|	SUPER:s DOT name:f LPAREN argument_list_opt:a RPAREN 
+	|	name:t DOT name:f LPAREN argument_list_opt:a RPAREN 
+	;
+
+// Type: 
+array_access ::=
+		name:n LBRACK expression:e RBRACK        
+	|	primary_no_new_array:p LBRACK expression:e RBRACK
+	;
+
+// Type:
+postfix_expression ::=
+		primary:l 		    
+ 	|	post_increment_expression:l 
+	|	post_decrement_expression:l 
+	|       name:n                      
+	;
+
+// Type: 
+post_increment_expression ::=
+		postfix_expression:e PLUSPLUS:o 
+	;
+
+// Type:
+post_decrement_expression ::=
+		postfix_expression:e MINUSMINUS:o
+	;
+
+// Type:
+unary_expression ::=
+		pre_increment_expression:p
+	|	pre_decrement_expression:p
+	| 	PLUS:o unary_expression:e
+	|	MINUS:o unary_expression:e
+	|	unary_expression_not_plus_minus:l 
+	;
+
+// Type:
+pre_increment_expression ::=
+		PLUSPLUS:o unary_expression:e	
+	;
+
+// Type:
+pre_decrement_expression ::=
+		MINUSMINUS:o unary_expression:e	
+	;
+
+// Type:
+unary_expression_not_plus_minus ::=
+		postfix_expression:l 	
+	|	COMP:o unary_expression:e
+	|	NOT:o unary_expression:e
+	|	cast_expression:c
+	;
+
+// Type: CastExpr :> Expression :> AST
+cast_expression ::=
+		LPAREN expression:e RPAREN unary_expression_not_plus_minus:ue
+		        {: if (!(e instanceof NameExpr)) 
+	                     Error.error("Error: (Class) name expected in cast");
+			   RESULT = new CastExpr(new ClassType(((NameExpr)e).name()), ue);
+			:}   
+	|	LPAREN primitive_type:p RPAREN unary_expression:e
+		        {: RESULT = new CastExpr(p, e); :}
+
+	;
+
+// Type:
+multiplicative_expression ::=
+		unary_expression:l 
+	|	multiplicative_expression:e1 MULT:o unary_expression:e2
+	|	multiplicative_expression:e1 DIV:o unary_expression:e2
+	|	multiplicative_expression:e1 MOD:o unary_expression:e2
+	;
+
+// Type: 
+additive_expression ::= 
+		multiplicative_expression:l 
+	|	additive_expression:e1 PLUS:o multiplicative_expression:e2
+	|	additive_expression:e1 MINUS:o multiplicative_expression:e2
+	;
+
+// Type:
+shift_expression ::=
+		additive_expression:l 
+	|	shift_expression:e1 LSHIFT:o additive_expression:e2
+	|	shift_expression:e1 RSHIFT:o additive_expression:e2
+	|	shift_expression:e1 RRSHIFT:o additive_expression:e2
+	;
+
+// Type:
+relational_expression ::=
+		shift_expression:l 
+	|	relational_expression:e1 LT:o shift_expression:e2
+	|	relational_expression:e1 GT:o shift_expression:e2
+	|	relational_expression:e1 LTEQ:o shift_expression:e2
+	|	relational_expression:e1 GTEQ:o shift_expression:e2
+	|     	relational_expression:e1 INSTANCEOF:o name:e2 
+	;
+
+// Type:
+equality_expression ::=
+		relational_expression:l 
+	|	equality_expression:e1 EQEQ:o relational_expression:e2
+	|	equality_expression:e1 NOTEQ:o relational_expression:e2
+	;
+
+// Type:
+and_expression ::=
+		equality_expression:l 
+	|	and_expression:e1 AND:o equality_expression:e2
+	;
+
+// Type:
+exclusive_or_expression ::=
+		and_expression:l 
+	|	exclusive_or_expression:e1 XOR:o and_expression:e2
+	;
+
+// Type: 
+inclusive_or_expression ::=
+		exclusive_or_expression:l 
+	|	inclusive_or_expression:e1 OR:o exclusive_or_expression:e2
+	;
+
+// Type:
+conditional_and_expression ::=
+		inclusive_or_expression:l 
+	|	conditional_and_expression:e1 ANDAND:o inclusive_or_expression:e2
+	;
+
+// Type:
+conditional_or_expression ::=
+		conditional_and_expression:l 
+	|	conditional_or_expression:e1 OROR:o conditional_and_expression:e2
+	;
+
+// Type:
+conditional_expression ::=
+		conditional_or_expression:l 
+	|	conditional_or_expression:t QUEST expression:tb COLON conditional_expression:fb
+	;
+
+// Type:
+assignment_expression ::=
+		conditional_expression:l 
+	|	assignment:l             
+	;
+
+// Type:
+assignment ::=	
+	left_hand_side:e1 assignment_operator:o assignment_expression:e2
+	;
+
+// Type:
+assignment_operator ::=
+                EQ:o        
+        |       MULTEQ:o    
+        |       DIVEQ:o     
+        |       MODEQ:o     
+        |       PLUSEQ:o    
+        |       MINUSEQ:o   
+        |       LSHIFTEQ:o  
+        |       RSHIFTEQ:o  
+        |       RRSHIFTEQ:o 
+        |       ANDEQ:o     
+        |       XOREQ:o     
+        |       OREQ:o      
+        ;       
+
+// Type:
+left_hand_side ::=
+		name:n         
+	|	field_access:l 
+	|	array_access:a 
+	;
+	
+// Type:
+expression_opt ::=
+		expression:l 
+	|       /* Empty */ 
+	;
+
+// Type:
+expression ::=	
+		assignment_expression:l 
+	;
+
+// Type:
+constant_expression ::=
+		expression:l		
+	;
+
+// -----------------------------------------------------------------------------
+// End of productions
+// -----------------------------------------------------------------------------
