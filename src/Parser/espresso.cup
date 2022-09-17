@@ -190,7 +190,7 @@ non terminal AST interface_type;
 non terminal ArrayType array_type;
 
 // 19.5) Names
-non terminal NameExpr name; 
+non terminal Name name; 
 
 // 19.6) Packages
 non terminal Compilation compilation_unit;
@@ -209,8 +209,8 @@ non terminal ClassDecl class_declaration;
 non terminal Super super_opt, super; 
 non terminal AST interfaces_opt, interfaces, interface_type_list;
 non terminal AST class_body;
-non terminal AST class_body_declarations, class_body_declarations_opt;
-non terminal AST class_body_declaration;
+non terminal ClassBodyDecl class_body_declarations, class_body_declarations_opt;
+non terminal ClassBodyDecl class_body_declaration;
 
 // 19.8.2) Field Declarations
 non terminal FieldDecl field_declaration;
@@ -241,7 +241,7 @@ non terminal AST extends_interfaces, extends_interfaces_opt, interface_body;
 non terminal AST interface_member_declarations_opt;
 non terminal AST interface_member_declarations, interface_member_declaration;
 non terminal AST constant_declaration;
-non terminal AST abstract_method_declaration;
+non terminal MethodDecl abstract_method_declaration;
 
 // 19.10) Arrays
 non terminal AST array_initializer;
@@ -251,7 +251,7 @@ non terminal AST variable_initializers;
 non terminal Block block;
 non terminal Block block_statements_opt, block_statements;
 non terminal Block block_statement;
-non terminal AST local_variable_declaration;
+non terminal LocalDecl local_variable_declaration;
 non terminal Statement statement, statement_no_short_if;
 non terminal Statement statement_without_trailing_substatement;
 non terminal NullType empty_statement;
@@ -266,7 +266,7 @@ non terminal SwitchStat switch_block_statement_groups_opt;
 non terminal SwitchStat switch_block_statement_groups;
 non terminal SwitchStat switch_block_statement_group;
 non terminal SwitchLabel switch_label;
-non terminal AST switch_labels;
+non terminal SwitchLabel switch_labels;
 non terminal WhileStat while_statement, while_statement_no_short_if;
 non terminal ForStat for_statement, for_statement_no_short_if;
 non terminal ForStat for_init_opt, for_init;
@@ -286,15 +286,15 @@ non terminal AST dim_exprs, dims_opt, dims;
 non terminal FieldRef field_access;
 non terminal Invocation method_invocation;
 non terminal ArrayAccessExpr array_access;
-non terminal AST postfix_expression;
+non terminal PostOp postfix_expression;
 non terminal PostOp post_increment_expression, post_decrement_expression;
-non terminal AST unary_expression;
-non terminal PreOp pre_increment_expression, pre_decrement_expression;
-non terminal AST unary_expression_not_plus_minus;
+non terminal UnaryPostExpr unary_expression;
+non terminal UnaryPreExpr pre_increment_expression, pre_decrement_expression;
+non terminal UnaryPreExpr unary_expression_not_plus_minus;
 non terminal CastExpr cast_expression;
-non terminal AST multiplicative_expression, additive_expression;
-non terminal AST shift_expression, relational_expression, equality_expression;
-non terminal AST and_expression, exclusive_or_expression, inclusive_or_expression;
+non terminal BinOp multiplicative_expression, additive_expression;
+non terminal BinOp shift_expression, relational_expression, equality_expression;
+non terminal BinOp and_expression, exclusive_or_expression, inclusive_or_expression;
 non terminal AST conditional_and_expression, conditional_or_expression;
 non terminal AST conditional_expression, assignment_expression;
 non terminal Assignment assignment;
