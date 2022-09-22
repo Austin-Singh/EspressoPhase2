@@ -183,10 +183,10 @@ non terminal Literal literal;
 // 19.4) Types, Values, and Variables
 non terminal Type type;
 non terminal PrimitiveType primitive_type;
-non terminal AST reference_type;
-non terminal AST class_or_interface_type;
+non terminal Type reference_type;
+non terminal ClassType class_or_interface_type;
 non terminal ClassType class_type;
-non terminal AST interface_type;
+non terminal ClassType interface_type;
 non terminal ArrayType array_type;
 
 // 19.5) Names
@@ -194,8 +194,8 @@ non terminal Name name;
 
 // 19.6) Packages
 non terminal Compilation compilation_unit;
-non terminal AST import_declarations_opt, import_declarations;
-non terminal AST import_declaration;
+non terminal Sequence import_declarations_opt, import_declarations;
+non terminal Name import_declaration;
 non terminal AST type_declarations_opt, type_declarations;
 non terminal AST type_declaration;
  
@@ -206,14 +206,14 @@ non terminal Modifier modifier;
 // 19.8) Classes
 // 19.8.1) Class Declaration
 non terminal ClassDecl class_declaration;
-non terminal Super super_opt, super; 
-non terminal AST interfaces_opt, interfaces, interface_type_list;
-non terminal AST class_body;
-non terminal ClassBodyDecl class_body_declarations, class_body_declarations_opt;
-non terminal ClassBodyDecl class_body_declaration;
+non terminal ClassType super_opt, super; 
+non terminal Sequence interfaces_opt, interfaces, interface_type_list;
+non terminal Sequence class_body;
+non terminal Sequence class_body_declarations, class_body_declarations_opt;
+non terminal Sequence class_body_declaration;
 
 // 19.8.2) Field Declarations
-non terminal FieldDecl field_declaration;
+non terminal Sequence field_declaration;
 non terminal AST variable_declarators;
 non terminal AST variable_declarator;
 non terminal AST variable_declarator_id;
@@ -224,7 +224,7 @@ non terminal AST variable_initializer;
 non terminal MethodDecl method_declaration;
 non terminal AST method_body;
 non terminal Sequence formal_parameter_list_opt, formal_parameter_list;
-non terminal AST formal_parameter;
+non terminal ParamDecl formal_parameter;
 
 // 19.8.4) Static Initializers
 non terminal StaticInitDecl static_initializer;   
@@ -240,7 +240,7 @@ non terminal AST interface_declaration;
 non terminal AST extends_interfaces, extends_interfaces_opt, interface_body;
 non terminal AST interface_member_declarations_opt;
 non terminal AST interface_member_declarations, interface_member_declaration;
-non terminal AST constant_declaration;
+non terminal Sequence constant_declaration;
 non terminal MethodDecl abstract_method_declaration;
 
 // 19.10) Arrays
@@ -251,7 +251,7 @@ non terminal AST variable_initializers;
 non terminal Block block;
 non terminal Block block_statements_opt, block_statements;
 non terminal Block block_statement;
-non terminal LocalDecl local_variable_declaration;
+non terminal Sequence local_variable_declaration;
 non terminal Statement statement, statement_no_short_if;
 non terminal Statement statement_without_trailing_substatement;
 non terminal NullType empty_statement;
