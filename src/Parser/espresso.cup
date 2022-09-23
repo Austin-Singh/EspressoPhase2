@@ -281,27 +281,27 @@ non terminal Expression primary, primary_no_new_array;
 non terminal New class_instance_creation_expression;
 non terminal Sequence argument_list_opt, argument_list;
 non terminal NewArray array_creation_expression;
-non terminal AST dim_expr;
-non terminal AST dim_exprs, dims_opt, dims;
+non terminal Expression dim_expr;
+non terminal Sequence dim_exprs, dims_opt, dims;
 non terminal FieldRef field_access;
 non terminal Invocation method_invocation;
 non terminal ArrayAccessExpr array_access;
-non terminal PostOp postfix_expression;
-non terminal PostOp post_increment_expression, post_decrement_expression;
-non terminal UnaryPostExpr unary_expression;
+non terminal Expression postfix_expression;
+non terminal UnaryPostOp post_increment_expression, post_decrement_expression;
+non terminal Expression unary_expression;
 non terminal UnaryPreExpr pre_increment_expression, pre_decrement_expression;
-non terminal UnaryPreExpr unary_expression_not_plus_minus;
+non terminal Expression unary_expression_not_plus_minus;
 non terminal CastExpr cast_expression;
-non terminal BinOp multiplicative_expression, additive_expression;
-non terminal BinOp shift_expression, relational_expression, equality_expression;
-non terminal BinOp and_expression, exclusive_or_expression, inclusive_or_expression;
-non terminal AST conditional_and_expression, conditional_or_expression;
-non terminal AST conditional_expression, assignment_expression;
+non terminal Expression multiplicative_expression, additive_expression;
+non terminal Expression shift_expression, relational_expression, equality_expression;
+non terminal Expression and_expression, exclusive_or_expression, inclusive_or_expression;
+non terminal Expression conditional_and_expression, conditional_or_expression;
+non terminal Expression conditional_expression, assignment_expression;
 non terminal Assignment assignment;
 non terminal AssignmentOp assignment_operator;
 non terminal Expression left_hand_side;
 non terminal Expression expression_opt, expression;
-non terminal AST constant_expression;
+non terminal Expression constant_expression;
 
 
 start with goal;
@@ -337,13 +337,13 @@ goal ::=	compilation_unit:c {: RESULT = c; :}
 
 // Type: Literal :> Expression :> AST
 literal ::=	
-		INTEGER_LITERAL:l        {: RESULT = new Literal(l, Literal.IntKind);     :}
+			INTEGER_LITERAL:l        {: RESULT = new Literal(l, Literal.IntKind);     :}
 	|       LONG_LITERAL:l           {: RESULT = new Literal(l, Literal.LongKind);    :}
 	|       FLOAT_LITERAL:l          {: RESULT = new Literal(l, Literal.FloatKind);   :}
 	|       DOUBLE_LITERAL:l         {: RESULT = new Literal(l, Literal.DoubleKind);  :}
-	|	BOOLEAN_LITERAL:l        {: RESULT = new Literal(l, Literal.BooleanKind); :}
-	|	STRING_LITERAL:l	 {: RESULT = new Literal(l, Literal.StringKind);  :}
-	|	NULL_LITERAL:l           {: RESULT = new Literal(l, Literal.NullKind);    :}
+	|		BOOLEAN_LITERAL:l        {: RESULT = new Literal(l, Literal.BooleanKind); :}
+	|		STRING_LITERAL:l		 {: RESULT = new Literal(l, Literal.StringKind);  :}
+	|		NULL_LITERAL:l           {: RESULT = new Literal(l, Literal.NullKind);    :}
 	|       CHARACTER_LITERAL:l      {: RESULT = new Literal(l, Literal.CharKind);    :}
 	;
 
@@ -358,13 +358,13 @@ type	::=	primitive_type:l 	 {: RESULT = l; :}
 
 // Type: PrimitiveType :> Type :> AST
 primitive_type ::=
-		BOOLEAN:l {: RESULT = new PrimitiveType(l, PrimitiveType.BooleanKind); :}
+			BOOLEAN:l {: RESULT = new PrimitiveType(l, PrimitiveType.BooleanKind); :}
 	|       BYTE:l	  {: RESULT = new PrimitiveType(l, PrimitiveType.ByteKind);  :}
 	|       SHORT:l   {: RESULT = new PrimitiveType(l, PrimitiveType.ShortKind);  :}
-	|	INT:l     {: RESULT = new PrimitiveType(l, PrimitiveType.IntKind);     :}
+	|		INT:l     {: RESULT = new PrimitiveType(l, PrimitiveType.IntKind);     :}
 	|       LONG:l    {: RESULT = new PrimitiveType(l, PrimitiveType.LongKind);     :}
 	|       FLOAT:l   {: RESULT = new PrimitiveType(l, PrimitiveType.FloatKind);   :}
-	|	DOUBLE:l  {: RESULT = new PrimitiveType(l, PrimitiveType.DoubleKind);  :}
+	|		DOUBLE:l  {: RESULT = new PrimitiveType(l, PrimitiveType.DoubleKind);  :}
 	|       CHAR:l    {: RESULT = new PrimitiveType(l, PrimitiveType.CharKind);  :}
 	|       STRING:l  {: RESULT = new PrimitiveType(l, PrimitiveType.StringKind);  :}
 	;
@@ -393,7 +393,7 @@ interface_type ::=
 // Type: ArrayType :> Type :> AST
 array_type ::= 
 	        primitive_type:t dims:d	        {: RESULT = new ArrayType(t, d.nchildren); :}
-	|	name:n dims:d	 		{: RESULT = new ArrayType(new ClassType(n), d.nchildren); :}
+	|		name:n dims:d	 		{: RESULT = new ArrayType(new ClassType(n), d.nchildren); :}
 	;
 
 // -----------------------------------------------------------------------------
@@ -401,7 +401,7 @@ array_type ::=
 // -----------------------------------------------------------------------------
 
 // Type: 
-name	::=	IDENTIFIER:i
+name	::=	IDENTIFIER:i	{: RESULT = new Name(i); :}
 	;
 
 // -----------------------------------------------------------------------------
@@ -468,10 +468,10 @@ modifiers ::=
 
 // Type: Modifier :> AST
 modifier ::=
-		PUBLIC:m   
-	|	PRIVATE:m  
-	|	STATIC:m   
-	|	FINAL:m    
+		PUBLIC:m   {: RESULT = new Modifier(m, Modifier.Public); :}
+	|	PRIVATE:m  {: RESULT = new Modifier(m, Modifier.Private); :}
+	|	STATIC:m   {: RESULT = new Modifier(m, Modifier.Static); :}
+	|	FINAL:m    {: RESULT = new Modifier(m, Modifier.Final); :}
 	|	ABSTRACT:m {: RESULT = new Modifier(m, Modifier.Abstract); :} 
 	;
 
@@ -1169,128 +1169,150 @@ cast_expression ::=
 
 	;
 
-// Type:
+// Type: Expression :> AST
 multiplicative_expression ::=
-		unary_expression:l 
+		unary_expression:l	{: RESULT = l; :}
 	|	multiplicative_expression:e1 MULT:o unary_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.MULT)); :}
 	|	multiplicative_expression:e1 DIV:o unary_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.DIV)); :}
 	|	multiplicative_expression:e1 MOD:o unary_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.MOD)); :}
 	;
 
-// Type: 
+// Type: Expression :> AST
 additive_expression ::= 
-		multiplicative_expression:l 
+		multiplicative_expression:l	{: RESULT = l; :}
 	|	additive_expression:e1 PLUS:o multiplicative_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.PLUS)); :}
 	|	additive_expression:e1 MINUS:o multiplicative_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.MINUS)); :}
 	;
 
-// Type:
+// Type: Expression :> AST
 shift_expression ::=
-		additive_expression:l 
+		additive_expression:l	{: RESULT = l; :}
 	|	shift_expression:e1 LSHIFT:o additive_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.LSHIFT)); :}
 	|	shift_expression:e1 RSHIFT:o additive_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.RSHIFT)); :}
 	|	shift_expression:e1 RRSHIFT:o additive_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.RRSHIFT)); :}
 	;
 
-// Type:
+// Type: Expression :> AST
 relational_expression ::=
-		shift_expression:l 
+		shift_expression:l 	{: RESULT = l; :}
 	|	relational_expression:e1 LT:o shift_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.LT)); :}
 	|	relational_expression:e1 GT:o shift_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.GT)); :}
 	|	relational_expression:e1 LTEQ:o shift_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.LTEQ)); :}
 	|	relational_expression:e1 GTEQ:o shift_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.GTEQ)); :}
 	|     	relational_expression:e1 INSTANCEOF:o name:e2 
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.INSTANCEOF)); :}
 	;
 
-// Type:
+// Type: Expression :> AST
 equality_expression ::=
-		relational_expression:l 
+		relational_expression:l	{: RESULT = l; :}
 	|	equality_expression:e1 EQEQ:o relational_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.EQEQ)); :}
 	|	equality_expression:e1 NOTEQ:o relational_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.NOTEQ)); :}
 	;
 
-// Type:
+// Type: Expression :> AST
 and_expression ::=
-		equality_expression:l 
+		equality_expression:l	{: RESULT = l; :}
 	|	and_expression:e1 AND:o equality_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.AND)); :}
 	;
 
-// Type:
+// Type: Expression :> AST
 exclusive_or_expression ::=
-		and_expression:l 
+		and_expression:l	{: RESULT = l; :}
 	|	exclusive_or_expression:e1 XOR:o and_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.XOR)); :}
 	;
 
-// Type: 
+// Type: Expression :> AST
 inclusive_or_expression ::=
-		exclusive_or_expression:l 
+		exclusive_or_expression:l	{: RESULT = l; :}
 	|	inclusive_or_expression:e1 OR:o exclusive_or_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.OR)); :}
 	;
 
-// Type:
+// Type: Expression :> AST
 conditional_and_expression ::=
-		inclusive_or_expression:l 
+		inclusive_or_expression:l	{: RESULT = l; :}
 	|	conditional_and_expression:e1 ANDAND:o inclusive_or_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.ANDAND)); :}
 	;
 
-// Type:
+// Type: Expression :> AST
 conditional_or_expression ::=
-		conditional_and_expression:l 
+		conditional_and_expression:l	{: RESULT = l; :}
 	|	conditional_or_expression:e1 OROR:o conditional_and_expression:e2
+				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.OROR)); :}
 	;
 
-// Type:
+// Type: Expression :> AST
 conditional_expression ::=
-		conditional_or_expression:l 
+		conditional_or_expression:l	{: RESULT = l; :}
 	|	conditional_or_expression:t QUEST expression:tb COLON conditional_expression:fb
+				{: RESULT = new Ternary(t, tb, fb); :}
 	;
 
-// Type:
+// Type: Expression :> AST
 assignment_expression ::=
-		conditional_expression:l 
-	|	assignment:l             
+		conditional_expression:l	{: RESULT = l; :}
+	|	assignment:l          		{: RESULT = l; :}
 	;
 
-// Type:
+// Type: Assignment :> AST
 assignment ::=	
 	left_hand_side:e1 assignment_operator:o assignment_expression:e2
+				{: RESULT = new Assignment(e1, e2, o); :}
 	;
 
-// Type:
+// Type: AssignmentOp :> AST
 assignment_operator ::=
-                EQ:o        
-        |       MULTEQ:o    
-        |       DIVEQ:o     
-        |       MODEQ:o     
-        |       PLUSEQ:o    
-        |       MINUSEQ:o   
-        |       LSHIFTEQ:o  
-        |       RSHIFTEQ:o  
-        |       RRSHIFTEQ:o 
-        |       ANDEQ:o     
-        |       XOREQ:o     
-        |       OREQ:o      
+                EQ:o        {: RESULT =  new AssignmentOp(o, AssignmentOp.EQ); :}
+        |       MULTEQ:o    {: RESULT =  new AssignmentOp(o, AssignmentOp.MULTEQ); :}
+        |       DIVEQ:o     {: RESULT =  new AssignmentOp(o, AssignmentOp.DIVEQ); :}
+        |       MODEQ:o     {: RESULT =  new AssignmentOp(o, AssignmentOp.MODEQ); :}
+        |       PLUSEQ:o    {: RESULT =  new AssignmentOp(o, AssignmentOp.PLUSEQ); :}
+        |       MINUSEQ:o   {: RESULT =  new AssignmentOp(o, AssignmentOp.MINUSEQ); :}
+        |       LSHIFTEQ:o  {: RESULT =  new AssignmentOp(o, AssignmentOp.LSHIFTEQ); :}
+        |       RSHIFTEQ:o  {: RESULT =  new AssignmentOp(o, AssignmentOp.RSHIFTEQ); :}
+        |       RRSHIFTEQ:o {: RESULT =  new AssignmentOp(o, AssignmentOp.RRSHIFTEQ); :}
+        |       ANDEQ:o     {: RESULT =  new AssignmentOp(o, AssignmentOp.ANDEQ); :}
+        |       XOREQ:o     {: RESULT =  new AssignmentOp(o, AssignmentOp.XOREQ); :}
+        |       OREQ:o      {: RESULT =  new AssignmentOp(o, AssignmentOp.OREQ); :}
         ;       
 
-// Type:
+// Type: Expression :> AST
 left_hand_side ::=
 		name:n         
 	|	field_access:l 
 	|	array_access:a 
 	;
 	
-// Type:
+// Type: Expression :> AST
 expression_opt ::=
 		expression:l 
 	|       /* Empty */ 
 	;
 
-// Type:
+// Type: Expression :> AST
 expression ::=	
 		assignment_expression:l 
 	;
 
-// Type:
+// Type: Expression :> AST
 constant_expression ::=
 		expression:l		
 	;
