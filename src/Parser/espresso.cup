@@ -214,11 +214,11 @@ non terminal Sequence class_body_declaration;
 
 // 19.8.2) Field Declarations
 non terminal Sequence field_declaration;
-non terminal AST variable_declarators;
-non terminal AST variable_declarator;
-non terminal AST variable_declarator_id;
+non terminal Sequence variable_declarators;
+non terminal Var variable_declarator;
+non terminal Var variable_declarator_id;
 non terminal Sequence variable_initializers_opt;
-non terminal AST variable_initializer;
+non terminal Expression variable_initializer;
 
 // 19.8.3) Method Declarations
 non terminal MethodDecl method_declaration;
@@ -582,24 +582,26 @@ field_declaration ::=
 			:}
 	;
 
-// Type:
+// Type: Sequence(Var) :> AST
 variable_declarators ::=
-		variable_declarator:v 	
+		variable_declarator:v 	{: RESULT = v; :}
 	|	variable_declarators:vs COMMA variable_declarator:v
+								{: RESULT = vs.merge(v); :}
 					
 	;
 
-// Type: 
+// Type: Var :> AST
 variable_declarator ::=
-		variable_declarator_id:n					
+		variable_declarator_id:n	{: RESULT = n; :}	
 	|	variable_declarator_id:n EQ variable_initializer:i
+									{: RESULT = new Var(n, i); :}
 	;
 
 
-// Type: 
+// Type: Var :> AST
 variable_declarator_id ::=
-		name:n			
-	|	variable_declarator_id:v LBRACK RBRACK
+		name:n									{: RESULT = n; :}
+	|	variable_declarator_id:v LBRACK RBRACK	{: RESULT = v; :}
 	;
 
 // Type: Expression :> AST;
