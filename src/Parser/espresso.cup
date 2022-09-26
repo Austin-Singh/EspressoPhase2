@@ -217,7 +217,7 @@ non terminal Sequence field_declaration;
 non terminal AST variable_declarators;
 non terminal AST variable_declarator;
 non terminal AST variable_declarator_id;
-non terminal AST variable_initializers_opt;
+non terminal Sequence variable_initializers_opt;
 non terminal AST variable_initializer;
 
 // 19.8.3) Method Declarations
@@ -244,8 +244,8 @@ non terminal Sequence constant_declaration;
 non terminal MethodDecl abstract_method_declaration;
 
 // 19.10) Arrays
-non terminal AST array_initializer;
-non terminal AST variable_initializers;
+non terminal ArrayLiteral array_initializer;
+non terminal Sequence variable_initializers;
 
 // 19.11) Blocks and Statements
 non terminal Block block;
@@ -602,10 +602,10 @@ variable_declarator_id ::=
 	|	variable_declarator_id:v LBRACK RBRACK
 	;
 
-// Type: 
+// Type: Expression :> AST;
 variable_initializer ::=
-		expression:l 		
-	|	array_initializer:a	
+		expression:l 		{: RESULT = l; :}
+	|	array_initializer:a	{: RESULT = a; :}
 	;
 
 // -----------------------------------------------------------------------------
@@ -629,16 +629,17 @@ method_body ::=
 	;
 
 
-// Type: 
+// Type: Sequence(ParamDecl) :> AST
 formal_parameter_list_opt ::=
-		formal_parameter_list:l 
-	|	/* Empty */		
+		formal_parameter_list:l	{: RESULT = l; :}
+	|	/* Empty */				{: RESULT = new Sequence(); :}
 	;
 
-// Type:
+// Type: Sequence(ParamDecl) :> AST
 formal_parameter_list ::=
-		formal_parameter:l	
+		formal_parameter:l	{: RESULT = l; :}
 	|	formal_parameter_list:ls COMMA formal_parameter:l
+							{: RESULT = ls.merge(l); :}
 	;
 
 // Type: ParamDecl :> AST
@@ -776,23 +777,24 @@ abstract_method_declaration ::=
 // 19.10) Arrays
 // -----------------------------------------------------------------------------
 
-// Type:
+// Type: ArrayLiteral :> Expression :> AST
 array_initializer ::=
 		LBRACE variable_initializers_opt:v RBRACE 
-					{: RESULT = v; :}
+					{: RESULT = new ArrayLiteral(v); :}
 	;
 
-// Type:
+// Type: Sequence(Expression) :> AST
 variable_initializers_opt ::=
-	        variable_initializers:v		
-	|	/* Epsilon */			
+	        variable_initializers:v	{: RESULT = v; :}
+	|	/* Epsilon */				{: RESULT = new Sequence(); :}
 	;
 
 	
-// Type: 
+// Type: Sequence(Expression) :> AST
 variable_initializers ::=
-		variable_initializer:v		
+		variable_initializer:v	{: RESULT = v; :}
 	|	variable_initializers:vs COMMA variable_initializer:v
+								{: RESULT = vs.merge(v); :}
 	;
 
 // -----------------------------------------------------------------------------
@@ -801,7 +803,7 @@ variable_initializers ::=
 
 // Type: Block :> Statement :> AST
 block ::=	
-		LBRACE block_statements_opt:l RBRACE	{: RESULT = l; :}
+		LBRACE block_statements_opt:l RBRACE	{: RESULT = new Block(l); :}
 	;
 
 // Type: Sequence(LocalDecl) :> AST
@@ -828,7 +830,7 @@ local_variable_declaration ::=
 		type:t variable_declarators:v
 			{: 
 			  // turn 'type a,b,c' into type a; type b; type c;
-			  // do the array fiddeling as for fields.
+			  // do the array fiddling as for fields.
                           for (int i=0;i<v.nchildren; i++) {
 			    Var var = (Var)v.children[i];
 			    Type at;
