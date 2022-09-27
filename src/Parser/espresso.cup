@@ -196,8 +196,8 @@ non terminal Name name;
 non terminal Compilation compilation_unit;
 non terminal Sequence import_declarations_opt, import_declarations;
 non terminal Name import_declaration;
-non terminal AST type_declarations_opt, type_declarations;
-non terminal AST type_declaration;
+non terminal Sequence type_declarations_opt, type_declarations;
+non terminal ClassDecl type_declaration;
  
 // 19.7) Productions used only in the LALR(1) grammar
 non terminal Sequence modifiers_opt, modifiers; 
@@ -232,11 +232,11 @@ non terminal StaticInitDecl static_initializer;
 // 19.8.5) Constructor Declarations
 non terminal ConstructorDecl constructor_declaration;
 non terminal AST constructor_body;
-non terminal AST explicit_constructor_invocation;
+non terminal CInvocation explicit_constructor_invocation;
 
 // 19.9) Interfaces
 // 19.9.1) Interface Declarations
-non terminal AST interface_declaration;
+non terminal ClassDecl interface_declaration;
 non terminal AST extends_interfaces, extends_interfaces_opt, interface_body;
 non terminal AST interface_member_declarations_opt;
 non terminal AST interface_member_declarations, interface_member_declaration;
@@ -254,7 +254,7 @@ non terminal Sequence block_statement;
 non terminal Sequence local_variable_declaration;
 non terminal Statement statement, statement_no_short_if;
 non terminal Statement statement_without_trailing_substatement;
-non terminal AST empty_statement;
+non terminal Statement empty_statement;
 non terminal ExprStat expression_statement;
 non terminal Expression statement_expression;
 non terminal IfStat if_then_statement;
@@ -433,22 +433,22 @@ import_declaration ::=
 		IMPORT name:n SEMICOLON   	{:  RESULT = n; :}
         ;
 
-// Type: 
+// Type: Sequence(ClassDecl) :> AST
 type_declarations_opt ::= 
-		type_declarations:e 	
-	|	/* Empty */          	
+		type_declarations:e	{: RESULT = e; :}
+	|	/* Empty */			{: RESULT = new Sequence(); :}
 	;
 
-// Type: 
+// Type: Sequence(ClassDecl) :> AST
 type_declarations ::=
-		type_declaration:t  	
-	|	type_declarations:ts type_declaration:t 
+		type_declaration:t						{: RESULT = t; :}
+	|	type_declarations:ts type_declaration:t	{: RESULT = ts.append(t); :}
 	;
 
-// Type: 
+// Type: ClassDecl :> AST
 type_declaration ::=
-		class_declaration:c    	
-	|	interface_declaration:c 
+		class_declaration:c		{: RESULT = c; :}
+	|	interface_declaration:c {: RESULT = c; :}
 	;
 
 
@@ -518,7 +518,7 @@ interfaces ::=
 interface_type_list ::=
 		interface_type:i	{: RESULT = new Sequence(i); :}
 	|	interface_type_list:l COMMA interface_type:i
-					{: RESULT = l.append(i); :}
+							{: RESULT = l.append(i); :}
 	;
 
 // Type: Sequence(ClassBodyDecl) :> AST
@@ -614,20 +614,22 @@ variable_initializer ::=
 // 19.8.3) Method Declarations
 // -----------------------------------------------------------------------------
 
-// Type: 
+// Type: MethodDecl :> ClassDecl :> AST
 method_declaration ::=
 		modifiers_opt:m  type:r  name:n 
 		LPAREN  formal_parameter_list_opt:p  RPAREN
 		method_body:b    
+				{: RESULT = new MethodDecl(m, r, n, p, b); :}
 	|	modifiers_opt:m  VOID:v	 name:n 
 		LPAREN  formal_parameter_list_opt:p  RPAREN
-		method_body:b    
+		method_body:b
+				{: RESULT = new MethodDecl(m, new Type(v), n, p, b); :}
 	;
 
 // Type: 
 method_body ::=
-		block:b		
-	|	SEMICOLON	
+		block:b		{: RESULT = b; :}
+	|	SEMICOLON																						
 	;
 
 
@@ -669,33 +671,37 @@ formal_parameter ::=
 // 19.8.4) Static Initializers
 // -----------------------------------------------------------------------------
 
-// Type: 
+// Type: StaticInitDecl :> ClassBodyDecl :> AST
 static_initializer ::= 
-		STATIC block:b		
+		STATIC block:b	{: RESULT = new StaticInitDecl(b); :}
 	;
 
 // -----------------------------------------------------------------------------
 // 19.8.5) Constructor Declarations
 // -----------------------------------------------------------------------------
 
-// Type: 
+// Type: ConstructorDecl :> ClassBodyDecl :> AST
 constructor_declaration ::=
 		modifiers_opt:m name:n LPAREN formal_parameter_list_opt:p RPAREN 
 		constructor_body:b 
+				{: RESULT = new ConstructorDecl(m, n, p, b); :}
 	;
 
-// Type: 
+// Type: AST
 constructor_body ::=
 		LBRACE explicit_constructor_invocation:e block_statements:b RBRACE
+				{: RESULT = new ConstructorBody(e, b); :}
 	|	LBRACE explicit_constructor_invocation:e RBRACE
+				{: RESULT = e; :}
 	|	LBRACE block_statements:b RBRACE
+				{: RESULT = b; :}
 	|       LBRACE RBRACE
 	;
 
-// Type: 
+// Type: CInvocation :> Expression :> AST
 explicit_constructor_invocation ::=
-		SUPER:s LPAREN argument_list_opt:a RPAREN SEMICOLON
-	|	THIS:t LPAREN argument_list_opt:a RPAREN SEMICOLON
+		SUPER:s LPAREN argument_list_opt:a RPAREN SEMICOLON	{: RESULT = new CInvocation(s, a); :}
+	|	THIS:t LPAREN argument_list_opt:a RPAREN SEMICOLON	{: RESULT = new CInvocation(t, a); :}
 	;
 
 // -----------------------------------------------------------------------------
@@ -706,10 +712,11 @@ explicit_constructor_invocation ::=
 // 19.9.1) Interface Declarations
 // -----------------------------------------------------------------------------
 
-// Type: 
+// Type: ClassDecl :> AST
 interface_declaration ::=
 		modifiers_opt:m INTERFACE name:n 
 		extends_interfaces_opt:e interface_body:i
+				{: RESULT = new ClassDecl(m, n, new ClassType(n), e, i, ClassDecl.IS_INTERFACE); :}
 	;
 
 // Type:
@@ -882,7 +889,7 @@ statement_without_trailing_substatement ::=
 	|	return_statement:l		{: RESULT = l; :}
 	;
 
-// Type: 
+// Type: Statement :> AST
 empty_statement ::=
 		SEMICOLON              																//leave as is? what is type?
 	;
@@ -935,19 +942,19 @@ switch_statement ::=
 				{: RESULT = new SwitchStat(e, s); :}
 	;
 
-// Type: Sequence(																				//what is type? Sequence(AST)?
+// Type: Sequence(AST) :> AST																	//is this type right?
 switch_block ::=
 		LBRACE switch_block_statement_groups_opt:s RBRACE
 				{: RESULT = s; :}
 	;
 
-// Type: Sequence(
+// Type: Sequence(AST) :> AST
 switch_block_statement_groups_opt ::=
 		switch_block_statement_groups:ss  {: RESULT = ss; :}
 	|	/* Empty */			  			  {: RESULT = new Sequence(); :}
 	;
 	
-// Type: Sequence(
+// Type: Sequence(AST) :> AST
 switch_block_statement_groups ::=
 		switch_block_statement_group:s	
 				{: RESULT = s; :}
@@ -955,7 +962,7 @@ switch_block_statement_groups ::=
 				{: RESULT = ss.merge((Sequence) s); :}
 	;
 
-// Type: Sequence(
+// Type: Sequence(AST) :> AST
 switch_block_statement_group ::=
 		switch_labels:l block_statements:s
 				{: RESULT = l.merge((Sequence) s); :}
@@ -999,13 +1006,13 @@ for_statement_no_short_if ::=
 				{: RESULT = new ForStat(f, i, e, u, s); :}
 	;
 
-// Type: Sequence(																				//what is type?
+// Type: Sequence(AST) :> AST																				//is this type correct?
 for_init_opt ::=
 		for_init:l 		{: RESULT = l; :}
 	|       /* Empty */ {: RESULT = new Sequence(); :}   		
 	;
 
-// Type: Sequence(
+// Type: Sequence(AST) :> AST
 for_init ::=	
 		statement_expression_list:l	 {: RESULT = l; :}
 	|	local_variable_declaration:l {: RESULT = l; :}
@@ -1109,7 +1116,7 @@ dims_opt ::=
 	;
 
 // Type: Sequence :> AST
-dims ::=	LBRACK RBRACK		  															//come back to this. leave as is?
+dims ::=	LBRACK RBRACK		  															
      	|	dims:d LBRACK RBRACK  {: RESULT = new Sequence(d); :}
 	;
 
