@@ -222,7 +222,7 @@ non terminal Expression variable_initializer;
 
 // 19.8.3) Method Declarations
 non terminal MethodDecl method_declaration;
-non terminal AST method_body;
+non terminal Block method_body;
 non terminal Sequence formal_parameter_list_opt, formal_parameter_list;
 non terminal ParamDecl formal_parameter;
 
@@ -237,9 +237,9 @@ non terminal CInvocation explicit_constructor_invocation;
 // 19.9) Interfaces
 // 19.9.1) Interface Declarations
 non terminal ClassDecl interface_declaration;
-non terminal AST extends_interfaces, extends_interfaces_opt, interface_body;
-non terminal AST interface_member_declarations_opt;
-non terminal AST interface_member_declarations, interface_member_declaration;
+non terminal Sequence extends_interfaces, extends_interfaces_opt, interface_body;
+non terminal Sequence interface_member_declarations_opt;
+non terminal Sequence interface_member_declarations, interface_member_declaration;
 non terminal Sequence constant_declaration;
 non terminal MethodDecl abstract_method_declaration;
 
@@ -626,7 +626,7 @@ method_declaration ::=
 				{: RESULT = new MethodDecl(m, new Type(v), n, p, b); :}
 	;
 
-// Type: 
+// Type: Block :> Statement :> AST
 method_body ::=
 		block:b		{: RESULT = b; :}
 	|	SEMICOLON																						
@@ -719,40 +719,45 @@ interface_declaration ::=
 				{: RESULT = new ClassDecl(m, n, new ClassType(n), e, i, ClassDecl.IS_INTERFACE); :}
 	;
 
-// Type:
+// Type: Sequence(ClassType) :> Type :> AST
 extends_interfaces_opt ::=
-		extends_interfaces:ei		
-	|	/* Empty */			
+		extends_interfaces:ei	{: RESULT = ei; :}
+	|	/* Empty */				{: RESULT = new Sequence(); :}
 	;
 
-// Type: 
+// Type: Sequence(ClassType) :> Type :> AST
 extends_interfaces ::=
-		EXTENDS interface_type:it	
+		EXTENDS interface_type:it
+				{: RESULT = it; :}
 	|	extends_interfaces:ei COMMA interface_type:it
+				{: RESULT = ei.append(it); :}
 	;
 
-// Type: 
+// Type: Sequence(
 interface_body ::=
 		LBRACE interface_member_declarations_opt:io RBRACE
+				{: RESULT = io; :}
 	;
 	
-// Type: 
+// Type: Sequence(
 interface_member_declarations_opt ::=
-		interface_member_declarations:id 
-	|	/* Empty */	                 
+		interface_member_declarations:id  {: RESULT = id; :}
+	|	/* Empty */						  {: RESULT = new Sequence(); :}
 	;
 
-// Type: 
+// Type: Sequence(
 interface_member_declarations ::=
-		interface_member_declaration:i         
+		interface_member_declaration:i
+				{: RESULT = i; :}
 	|	interface_member_declarations:is
-			interface_member_declaration:i 
+			interface_member_declaration:i
+				{: RESULT = is.merge((Sequence) i); :}
 	;
 
-// Type: 
+// Type: Sequence(
 interface_member_declaration ::=
-		constant_declaration:cd         
-	|	abstract_method_declaration:md  
+		constant_declaration:cd         {: RESULT = cd; :}
+	|	abstract_method_declaration:md	{: RESULT = md; :}
 	;
 	
 // Type: Sequence(FieldDecl) :> AST
@@ -1093,11 +1098,15 @@ argument_list ::=
 	;
 
 // Type: NewArray :> Expression :> AST
-array_creation_expression ::=																//come back to this
-		NEW primitive_type:t dim_exprs:d1 dims_opt:d2										//4th parameter?
+array_creation_expression ::=
+		NEW primitive_type:t dim_exprs:d1 dims_opt:d2
+				{: RESULT = new NewArray(t, d1, d2, 
 	|	NEW class_or_interface_type:t dim_exprs:d1 dims_opt:d2
+				{: RESULT = new NewArray(t, d1, d2, 
 	|	NEW primitive_type:t dims:d array_initializer:i
+				{: RESULT = new NewArray(t, 
 	|	NEW class_or_interface_type:t dims:d array_initializer:i
+				{: RESULT = new NewArray(t, 
 	;
 
 // Type: Sequence :> AST
