@@ -922,27 +922,27 @@ statement_expression ::=
 // Type: IfStat :> Statement :> AST
 if_then_statement ::=
 		IF LPAREN expression:e RPAREN statement:t
-				{: RETURN = new IfStat(e, t); :}
+				{: RESULT = new IfStat(e, t); :}
 	;
 
 // Type: IfStat :> Statement :> AST
 if_then_else_statement ::=
 		IF LPAREN expression:e RPAREN statement_no_short_if:t
 		ELSE statement:ls
-				{: RETURN = new IfStat(e, t, ls); :}
+				{: RESULT = new IfStat(e, t, ls); :}
 	;
 
 // Type: IfStat :> Statement :> AST
 if_then_else_statement_no_short_if ::=
 		IF LPAREN expression:e RPAREN statement_no_short_if:t
 		ELSE statement_no_short_if:ls
-				{: RETURN = new IfStat(e, t); :}
+				{: RESULT = new IfStat(e, t); :}
 	;
 
 // Type: DoStat :> Statement :> AST
 do_statement ::=
 		DO statement:s WHILE LPAREN expression:e RPAREN SEMICOLON
-				{: RETURN = new DoStat(s, e); :}
+				{: RESULT = new DoStat(s, e); :}
 	;
 
 // Type SwitchStat :> Statement :> AST
@@ -979,14 +979,14 @@ switch_block_statement_group ::=
 
 // Type: Sequence(SwitchLabel) :> AST
 switch_labels ::=
-		switch_label:s					 {: RETURN = s; :}
-	|	switch_labels:ss  switch_label:s {: RETURN = ss.append(s); :}
+		switch_label:s					 {: RESULT = s; :}
+	|	switch_labels:ss  switch_label:s {: RESULT = ss.append(s); :}
 	;
 
 // Type: SwitchLabel :> AST
 switch_label ::=
 		CASE constant_expression:e COLON  {: RESULT = new SwitchLabel(e, false); :}
-	|	DEFAULT COLON                     {: RESULT = new SwitchLabel(e, true); :}		//is this correct?
+	|	DEFAULT COLON                     											//is this correct?
 	;
 
 // Type: WhileStat :> Statement :> AST
@@ -1041,24 +1041,24 @@ for_update ::=
 // Type: Sequence(Expression) :> AST
 statement_expression_list ::=
 		statement_expression:e	
-				{: RETURN = new Sequence(e); :}
+				{: RESULT = new Sequence(e); :}
 	|	statement_expression_list:es COMMA statement_expression:e
-				{: RETURN = es.append(e); :}
+				{: RESULT = es.append(e); :}
 	;
 
 // Type: BreakStat :> Statement :> AST
 break_statement ::=
-		BREAK:b SEMICOLON	{: RETURN = new BreakStat(b); :}
+		BREAK:b SEMICOLON	{: RESULT = new BreakStat(b); :}
 	;
 
 // Type: ContinueStat :> Statement :> AST
 continue_statement ::=
-		CONTINUE:c SEMICOLON	{: RETURN = new ContinueStat(c); :}
+		CONTINUE:c SEMICOLON	{: RESULT = new ContinueStat(c); :}
 	;
 
 // Type: ReturnStat :> Statement :> AST
 return_statement ::=
-		RETURN:r expression_opt:e SEMICOLON	 {: RETURN = new ReturnStat(r, e); :}
+		RETURN:r expression_opt:e SEMICOLON	 {: RESULT = new ReturnStat(r, e); :}
 	;
 
 // -----------------------------------------------------------------------------
@@ -1074,7 +1074,7 @@ primary ::=
 // Type: Expression :> AST
 primary_no_new_array ::=	
 		literal:l								{: RESULT = l; :}
-	|	THIS:l									{: RESULT = l; :}
+	|	THIS:l									{: RESULT = new This(l); :}
 	|	LPAREN expression:l RPAREN				{: RESULT = l; :}
 	|	class_instance_creation_expression:l  	{: RESULT = l; :}
 	|	field_access:l							{: RESULT = l; :}
@@ -1097,7 +1097,7 @@ argument_list_opt ::=
 
 // Type: Sequence :> AST
 argument_list ::=
-		expression:l	{: RESULT = l; :}
+		expression:l	{: RESULT = new Sequence(l); :}
 	|	argument_list:ls COMMA expression:l	{: RESULT = ls.append(l); :}
 	;
 
@@ -1114,7 +1114,7 @@ array_creation_expression ::=
 	;
 
 // Type: Sequence :> AST
-dim_exprs ::=	dim_expr:d		{: RESULT = d; :}
+dim_exprs ::=	dim_expr:d		{: RESULT = new Sequence(d); :}
 	|	dim_exprs:ds dim_expr:d	{: RESULT = ds.append(d); :}
 	;
 
@@ -1136,8 +1136,8 @@ dims ::=	LBRACK RBRACK
 // Type: FieldRef :> Expression :> AST
 field_access ::=
 		primary:e DOT name:n {: RESULT = new FieldRef(e, n); :}
-	|	SUPER:s DOT name:n	 {: RESULT = new FieldRef(s, n); :}
-	|   name:e DOT name:n	 {: RESULT = new FieldRef(e, n); :}
+	|	SUPER:s DOT name:n	 {: RESULT = new FieldRef(new NameExpr(new Name(s)), n); :}
+	|   name:e DOT name:n	 {: RESULT = new FieldRef(new NameExpr(e), n); :}
 	;
 
 // Type: Invocation :> Expression :> AST
@@ -1147,15 +1147,15 @@ method_invocation ::=
     |	primary:t DOT name:f LPAREN argument_list_opt:a RPAREN
     			{: RESULT = new Invocation(t, f, a); :}
 	|	SUPER:s DOT name:f LPAREN argument_list_opt:a RPAREN
-				{: RESULT = new Invocation(s, f, a); :}
+				{: RESULT = new Invocation(new NameExpr(new Name(s)), f, a); :}
 	|	name:t DOT name:f LPAREN argument_list_opt:a RPAREN
-				{: RESULT = new Invocation(t, f, a); :}
+				{: RESULT = new Invocation(new NameExpr(t), f, a); :}
 	;
 
 // Type: ArrayAccessExpr :> Expression :> AST
 array_access ::=
 		name:n LBRACK expression:e RBRACK
-				{: RESULT = new ArrayAccessExpr(n, e); :}
+				{: RESULT = new ArrayAccessExpr(new NameExpr(n), e); :}
 	|	primary_no_new_array:p LBRACK expression:e RBRACK
 				{: RESULT = new ArrayAccessExpr(p, e); :}
 	;
@@ -1165,47 +1165,47 @@ postfix_expression ::=
 		primary:l					{: RESULT = l; :}
  	|	post_increment_expression:l	{: RESULT = l; :}
 	|	post_decrement_expression:l {: RESULT = l; :}
-	|   name:n						{: RESULT = n; :}
+	|   name:n						{: RESULT = new NameExpr(n); :}
 	;
 
 // Type: UnaryPostExpr :> Expression :> AST
 post_increment_expression ::=
 		postfix_expression:e PLUSPLUS:o
-			{: RESULT = new UnaryPostExpr(e, new PostOp(o, PostOp.PLUSPLUS); :}
+			{: RESULT = new UnaryPostExpr(e, new PostOp(o, PostOp.PLUSPLUS)); :}
 	;
 
 // Type: UnaryPostExpr :> Expression :> AST
 post_decrement_expression ::=
 		postfix_expression:e MINUSMINUS:o
-			{: RESULT = new UnaryPostExpr(e, new PostOp(o, PostOp.MINUSMINUS); :}
+			{: RESULT = new UnaryPostExpr(e, new PostOp(o, PostOp.MINUSMINUS)); :}
 	;
 
 // Type: Expression :> AST
 unary_expression ::=
 		pre_increment_expression:p			{: RESULT = p; :}
 	|	pre_decrement_expression:p			{: RESULT = p; :}
-	| 	PLUS:o unary_expression:e			{: RESULT = new UnaryPreExpr(e, new PreOp(o, PreOp.PLUS); :}
-	|	MINUS:o unary_expression:e			{: RESULT = new UnaryPreExpr(e, new PreOp(o, PreOp.MINUS); :}
+	| 	PLUS:o unary_expression:e			{: RESULT = new UnaryPreExpr(e, new PreOp(o, PreOp.PLUS)); :}
+	|	MINUS:o unary_expression:e			{: RESULT = new UnaryPreExpr(e, new PreOp(o, PreOp.MINUS)); :}
 	|	unary_expression_not_plus_minus:l	{: RESULT = l; :}
 	;
 
 // Type: UnaryPreExpr :> Expression :> AST
 pre_increment_expression ::=
 		PLUSPLUS:o unary_expression:e
-			{: RESULT = new UnaryPreExpr(e, new PreOp(o, PreOp.PLUSPLUS); :}
+			{: RESULT = new UnaryPreExpr(e, new PreOp(o, PreOp.PLUSPLUS)); :}
 	;
 
 // Type: UnaryPreExpr :> Expression :> AST
 pre_decrement_expression ::=
 		MINUSMINUS:o unary_expression:e	
-			{: RESULT = new UnaryPreExpr(e, new PreOp(o, PreOp.MINUSMINUS); :}
+			{: RESULT = new UnaryPreExpr(e, new PreOp(o, PreOp.MINUSMINUS)); :}
 	;
 
 // Type: Expression :> AST
 unary_expression_not_plus_minus ::=
 		postfix_expression:l 		{: RESULT = l; :}
-	|	COMP:o unary_expression:e	{: RESULT = new UnaryPreExpr(e, new PreOp(o, PreOp.COMP); :}
-	|	NOT:o unary_expression:e	{: RESULT = new UnaryPreExpr(e, new PreOp(o, PreOp.NOT); :}
+	|	COMP:o unary_expression:e	{: RESULT = new UnaryPreExpr(e, new PreOp(o, PreOp.COMP)); :}
+	|	NOT:o unary_expression:e	{: RESULT = new UnaryPreExpr(e, new PreOp(o, PreOp.NOT)); :}
 	|	cast_expression:c			{: RESULT = c; :}
 	;
 
@@ -1264,7 +1264,7 @@ relational_expression ::=
 	|	relational_expression:e1 GTEQ:o shift_expression:e2
 				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.GTEQ)); :}
 	|     	relational_expression:e1 INSTANCEOF:o name:e2 
-				{: RESULT = new BinaryExpr(e1, e2, new BinOp(o, BinOp.INSTANCEOF)); :}
+				{: RESULT = new BinaryExpr(e1, new NameExpr(e2), new BinOp(o, BinOp.INSTANCEOF)); :}
 	;
 
 // Type: Expression :> AST
@@ -1348,7 +1348,7 @@ assignment_operator ::=
 
 // Type: Expression :> AST
 left_hand_side ::=
-		name:n         		{: RESULT = n; :}
+		name:n         		{: RESULT = new NameExpr(n); :}
 	|	field_access:l 		{: RESULT = l; :}
 	|	array_access:a 		{: RESULT = a; :}
 	;
