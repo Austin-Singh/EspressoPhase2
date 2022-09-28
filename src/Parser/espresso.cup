@@ -684,7 +684,7 @@ static_initializer ::=
 constructor_declaration ::=
 		modifiers_opt:m name:n LPAREN formal_parameter_list_opt:p RPAREN 
 		constructor_body:b 
-				{: RESULT = new ConstructorDecl(m, n, p, b); :}
+				{: RESULT = new ConstructorDecl(m, n, p, null, b); :}
 	;
 
 // Type: AST
