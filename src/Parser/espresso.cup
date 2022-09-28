@@ -619,7 +619,7 @@ method_declaration ::=
 		modifiers_opt:m  type:r  name:n 
 		LPAREN  formal_parameter_list_opt:p  RPAREN
 		method_body:b    
-				{: RESULT = new MethodDecl(m, r, n, p, b); :}
+				{: RESULT = new MethodDecl(m, r, n, p, b, MethodDecl.IS_NOT_INTERFACE_MEMBER); :}
 	|	modifiers_opt:m  VOID:v	 name:n 
 		LPAREN  formal_parameter_list_opt:p  RPAREN
 		method_body:b
