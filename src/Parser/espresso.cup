@@ -216,7 +216,7 @@ non terminal Sequence class_body_declaration;
 non terminal Sequence field_declaration;
 non terminal Sequence variable_declarators;
 non terminal Var variable_declarator;
-non terminal Var variable_declarator_id;
+non terminal Name variable_declarator_id;
 non terminal Sequence variable_initializers_opt;
 non terminal Expression variable_initializer;
 
@@ -441,7 +441,7 @@ type_declarations_opt ::=
 
 // Type: Sequence(ClassDecl) :> AST
 type_declarations ::=
-		type_declaration:t						{: RESULT = t; :}
+		type_declaration:t						{: RESULT = new Sequence(t); :}
 	|	type_declarations:ts type_declaration:t	{: RESULT = ts.append(t); :}
 	;
 
@@ -584,7 +584,7 @@ field_declaration ::=
 
 // Type: Sequence(Var) :> AST
 variable_declarators ::=
-		variable_declarator:v 	{: RESULT = v; :}
+		variable_declarator:v 	{: RESULT = new Sequence(v); :}
 	|	variable_declarators:vs COMMA variable_declarator:v
 								{: RESULT = vs.merge(v); :}
 					
@@ -598,7 +598,7 @@ variable_declarator ::=
 	;
 
 
-// Type: Var :> AST
+// Type: Name :> AST
 variable_declarator_id ::=
 		name:n									{: RESULT = n; :}
 	|	variable_declarator_id:v LBRACK RBRACK	{: RESULT = v; :}
@@ -730,7 +730,7 @@ extends_interfaces_opt ::=
 // Type: Sequence(ClassType) :> Type :> AST
 extends_interfaces ::=
 		EXTENDS interface_type:it
-				{: RESULT = it; :}
+				{: RESULT = new Sequence(it); :}
 	|	extends_interfaces:ei COMMA interface_type:it
 				{: RESULT = ei.append(it); :}
 	;
@@ -759,7 +759,7 @@ interface_member_declarations ::=
 // Type: Sequence(ClassBodyDecl) :> AST
 interface_member_declaration ::=
 		constant_declaration:cd         {: RESULT = cd; :}
-	|	abstract_method_declaration:md	{: RESULT = md; :}
+	|	abstract_method_declaration:md	{: RESULT = new Sequence(md); :}
 	;
 	
 // Type: Sequence(FieldDecl) :> AST
@@ -788,7 +788,7 @@ abstract_method_declaration ::=
 				{: RESULT = new MethodDecl(m, r, n, p, null, MethodDecl.IS_INTERFACE_MEMBER); :}
 	|	modifiers_opt:m  VOID:v	 name:n 
 		LPAREN  formal_parameter_list_opt:p  RPAREN SEMICOLON
-				{: RESULT = new MethodDecl(m, new Type(v), n, p, null, MethodDecl.IS_INTERFACE_MEMBER); :}
+				{: RESULT = new MethodDecl(m, new PrimitiveType(v, PrimitiveType.VoidKind), n, p, null, MethodDecl.IS_INTERFACE_MEMBER); :}
 	;
 
 // -----------------------------------------------------------------------------
@@ -810,7 +810,7 @@ variable_initializers_opt ::=
 	
 // Type: Sequence(Expression) :> AST
 variable_initializers ::=
-		variable_initializer:v	{: RESULT = v; :}
+		variable_initializer:v	{: RESULT = new Sequence(v); :}
 	|	variable_initializers:vs COMMA variable_initializer:v
 								{: RESULT = vs.merge(v); :}
 	;
@@ -840,7 +840,7 @@ block_statements ::=
 // Type: Sequence(LocalDecl) :> AST
 block_statement ::=
 		local_variable_declaration:l SEMICOLON {: RESULT = l; :}
-	|	statement:l	{: RESULT = l; :}               
+	|	statement:l	{: RESULT = new Sequence(l); :}               
 	;
 
 // Type: Sequence(LocalDecl) :> AST
@@ -979,7 +979,7 @@ switch_block_statement_group ::=
 
 // Type: Sequence(SwitchLabel) :> AST
 switch_labels ::=
-		switch_label:s					 {: RESULT = s; :}
+		switch_label:s					 {: RESULT = new Sequence(s); :}
 	|	switch_labels:ss  switch_label:s {: RESULT = ss.append(s); :}
 	;
 
