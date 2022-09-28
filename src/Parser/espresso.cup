@@ -231,7 +231,7 @@ non terminal StaticInitDecl static_initializer;
 
 // 19.8.5) Constructor Declarations
 non terminal ConstructorDecl constructor_declaration;
-non terminal AST constructor_body;
+non terminal Sequence constructor_body;
 non terminal CInvocation explicit_constructor_invocation;
 
 // 19.9) Interfaces
@@ -592,7 +592,7 @@ variable_declarators ::=
 
 // Type: Var :> AST
 variable_declarator ::=
-		variable_declarator_id:n	{: RESULT = n; :}	
+		variable_declarator_id:n	{: RESULT = new Var(n); :}	
 	|	variable_declarator_id:n EQ variable_initializer:i
 									{: RESULT = new Var(n, i); :}
 	;
@@ -623,7 +623,7 @@ method_declaration ::=
 	|	modifiers_opt:m  VOID:v	 name:n 
 		LPAREN  formal_parameter_list_opt:p  RPAREN
 		method_body:b
-				{: RESULT = new MethodDecl(m, new Type(v), n, p, b); :}
+				{: RESULT = new MethodDecl(m, new PrimitiveType(v, PrimitiveType.VoidKind), n, p, b, MethodDecl.IS_NOT_INTERFACE_MEMBER); :}
 	;
 
 // Type: Block :> Statement :> AST
@@ -641,7 +641,7 @@ formal_parameter_list_opt ::=
 
 // Type: Sequence(ParamDecl) :> AST
 formal_parameter_list ::=
-		formal_parameter:l	{: RESULT = l; :}
+		formal_parameter:l	{: RESULT = new Sequence(l); :}
 	|	formal_parameter_list:ls COMMA formal_parameter:l
 							{: RESULT = ls.merge(l); :}
 	;
@@ -687,12 +687,12 @@ constructor_declaration ::=
 				{: RESULT = new ConstructorDecl(m, n, p, null, b); :}
 	;
 
-// Type: AST
+// Type: Sequence(
 constructor_body ::=
 		LBRACE explicit_constructor_invocation:e block_statements:b RBRACE
-				{: RESULT = new ConstructorBody(e, b); :}
+				{: RESULT = new Sequence(e).append(b); :}
 	|	LBRACE explicit_constructor_invocation:e RBRACE
-				{: RESULT = e; :}
+				{: RESULT = new Sequence(e); :}
 	|	LBRACE block_statements:b RBRACE
 				{: RESULT = b; :}
 	|       LBRACE RBRACE
