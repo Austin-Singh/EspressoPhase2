@@ -495,7 +495,7 @@ class_declaration ::=
 // Type: ClassType :> Type :> AST
 super_opt ::=
 		super:s	 {: RESULT = s; :}
-	|       /* Empty */		
+	|       /* Empty */													//leave as is?
 	;
 
 // Type: ClassType :> Type :> AST
@@ -700,8 +700,10 @@ constructor_body ::=
 
 // Type: CInvocation :> Expression :> AST
 explicit_constructor_invocation ::=
-		SUPER:s LPAREN argument_list_opt:a RPAREN SEMICOLON	{: RESULT = new CInvocation(s, a); :}
-	|	THIS:t LPAREN argument_list_opt:a RPAREN SEMICOLON	{: RESULT = new CInvocation(t, a); :}
+		SUPER:s LPAREN argument_list_opt:a RPAREN SEMICOLON	
+				{: RESULT = new CInvocation(s, a); :}
+	|	THIS:t LPAREN argument_list_opt:a RPAREN SEMICOLON	
+				{: RESULT = new CInvocation(t, a); :}
 	;
 
 // -----------------------------------------------------------------------------
@@ -733,19 +735,19 @@ extends_interfaces ::=
 				{: RESULT = ei.append(it); :}
 	;
 
-// Type: Sequence(
+// Type: Sequence(ClassBodyDecl) :> AST
 interface_body ::=
 		LBRACE interface_member_declarations_opt:io RBRACE
 				{: RESULT = io; :}
 	;
 	
-// Type: Sequence(
+// Type: Sequence(ClassBodyDecl) :> AST
 interface_member_declarations_opt ::=
 		interface_member_declarations:id  {: RESULT = id; :}
 	|	/* Empty */						  {: RESULT = new Sequence(); :}
 	;
 
-// Type: Sequence(
+// Type: Sequence(ClassBodyDecl) :> AST
 interface_member_declarations ::=
 		interface_member_declaration:i
 				{: RESULT = i; :}
@@ -754,7 +756,7 @@ interface_member_declarations ::=
 				{: RESULT = is.merge((Sequence) i); :}
 	;
 
-// Type: Sequence(
+// Type: Sequence(ClassBodyDecl) :> AST
 interface_member_declaration ::=
 		constant_declaration:cd         {: RESULT = cd; :}
 	|	abstract_method_declaration:md	{: RESULT = md; :}
@@ -779,12 +781,14 @@ constant_declaration ::=
                         
 	;
 
-// Type: 
+// Type: MethodDecl :> ClassBodyDecl :> AST
 abstract_method_declaration ::=
 		modifiers_opt:m  type:r  name:n 
 		LPAREN  formal_parameter_list_opt:p  RPAREN SEMICOLON
+				{: RESULT = new MethodDecl(m, r, n, p, null, MethodDecl.IS_INTERFACE_MEMBER); :}
 	|	modifiers_opt:m  VOID:v	 name:n 
 		LPAREN  formal_parameter_list_opt:p  RPAREN SEMICOLON
+				{: RESULT = new MethodDecl(m, new Type(v), n, p, null, MethodDecl.IS_INTERFACE_MEMBER); :}
 	;
 
 // -----------------------------------------------------------------------------
@@ -896,7 +900,7 @@ statement_without_trailing_substatement ::=
 
 // Type: Statement :> AST
 empty_statement ::=
-		SEMICOLON              																//leave as is? what is type?
+		SEMICOLON              												//leave as is? what is type?
 	;
 
 // Type: ExprStat :> Statement :> AST
@@ -947,7 +951,7 @@ switch_statement ::=
 				{: RESULT = new SwitchStat(e, s); :}
 	;
 
-// Type: Sequence(AST) :> AST																	//is this type right?
+// Type: Sequence(AST) :> AST														//is this type right?
 switch_block ::=
 		LBRACE switch_block_statement_groups_opt:s RBRACE
 				{: RESULT = s; :}
@@ -982,7 +986,7 @@ switch_labels ::=
 // Type: SwitchLabel :> AST
 switch_label ::=
 		CASE constant_expression:e COLON  {: RESULT = new SwitchLabel(e, false); :}
-	|	DEFAULT COLON                     {: RESULT = new SwitchLabel(e, true); :}				//is this correct?
+	|	DEFAULT COLON                     {: RESULT = new SwitchLabel(e, true); :}		//is this correct?
 	;
 
 // Type: WhileStat :> Statement :> AST
@@ -1011,7 +1015,7 @@ for_statement_no_short_if ::=
 				{: RESULT = new ForStat(f, i, e, u, s); :}
 	;
 
-// Type: Sequence(AST) :> AST																				//is this type correct?
+// Type: Sequence(AST) :> AST														//is this type correct?
 for_init_opt ::=
 		for_init:l 		{: RESULT = l; :}
 	|       /* Empty */ {: RESULT = new Sequence(); :}   		
@@ -1100,13 +1104,13 @@ argument_list ::=
 // Type: NewArray :> Expression :> AST
 array_creation_expression ::=
 		NEW primitive_type:t dim_exprs:d1 dims_opt:d2
-				{: RESULT = new NewArray(t, d1, d2, 
+				{: RESULT = new NewArray(t, d1, d2, null); :}
 	|	NEW class_or_interface_type:t dim_exprs:d1 dims_opt:d2
-				{: RESULT = new NewArray(t, d1, d2, 
+				{: RESULT = new NewArray(t, d1, d2, null); :}
 	|	NEW primitive_type:t dims:d array_initializer:i
-				{: RESULT = new NewArray(t, 
+				{: RESULT = new NewArray(t, new Sequence(), d, i); :}
 	|	NEW class_or_interface_type:t dims:d array_initializer:i
-				{: RESULT = new NewArray(t, 
+				{: RESULT = new NewArray(t, new Sequence(), d, i); :}
 	;
 
 // Type: Sequence :> AST
@@ -1352,7 +1356,7 @@ left_hand_side ::=
 // Type: Expression :> AST
 expression_opt ::=
 		expression:l 	{: RESULT = l; :}
-	|       /* Empty */ 																		//come back to this. leave empty?
+	|       /* Empty */ 												//come back to this. leave empty?
 	;
 
 // Type: Expression :> AST
