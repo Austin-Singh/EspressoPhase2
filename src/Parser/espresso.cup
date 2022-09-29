@@ -256,7 +256,7 @@ non terminal Statement statement, statement_no_short_if;
 non terminal Statement statement_without_trailing_substatement;
 non terminal Statement empty_statement;
 non terminal ExprStat expression_statement;
-non terminal Expression statement_expression;
+non terminal ExprStat statement_expression;
 non terminal IfStat if_then_statement;
 non terminal IfStat if_then_else_statement, if_then_else_statement_no_short_if;
 non terminal DoStat do_statement;
@@ -687,7 +687,7 @@ constructor_declaration ::=
 				{: RESULT = new ConstructorDecl(m, n, p, null, b); :}
 	;
 
-// Type: Sequence(
+// Type: Sequence(Expression) :> AST
 constructor_body ::=
 		LBRACE explicit_constructor_invocation:e block_statements:b RBRACE
 				{: RESULT = new Sequence(e).append(b); :}
@@ -696,6 +696,7 @@ constructor_body ::=
 	|	LBRACE block_statements:b RBRACE
 				{: RESULT = b; :}
 	|       LBRACE RBRACE
+				{: RESULT = new Sequence(); :}
 	;
 
 // Type: CInvocation :> Expression :> AST
@@ -905,18 +906,18 @@ empty_statement ::=
 
 // Type: ExprStat :> Statement :> AST
 expression_statement ::=
-		statement_expression:l SEMICOLON  {: RESULT = new ExprStat(l); :}
+		statement_expression:l SEMICOLON  {: RESULT = l; :}
 	;
 
-// Type: Expression :> AST
+// Type: ExprStat :> Statement :> AST
 statement_expression ::=
-		assignment:l        				  {: RESULT = l; :}
-	|	pre_increment_expression:l			  {: RESULT = l; :}
-	| 	pre_decrement_expression:l			  {: RESULT = l; :}
-	|	post_increment_expression:l 		  {: RESULT = l; :}
-	|	post_decrement_expression:l			  {: RESULT = l; :}
-	|	method_invocation:l 				  {: RESULT = l; :}
-	|	class_instance_creation_expression:l  {: RESULT = l; :}
+		assignment:l        				  {: RESULT = new ExprStat(l); :}
+	|	pre_increment_expression:l			  {: RESULT = new ExprStat(l); :}
+	| 	pre_decrement_expression:l			  {: RESULT = new ExprStat(l); :}
+	|	post_increment_expression:l 		  {: RESULT = new ExprStat(l); :}
+	|	post_decrement_expression:l			  {: RESULT = new ExprStat(l); :}
+	|	method_invocation:l 				  {: RESULT = new ExprStat(l); :}
+	|	class_instance_creation_expression:l  {: RESULT = new ExprStat(l); :}
 	;
 
 // Type: IfStat :> Statement :> AST
